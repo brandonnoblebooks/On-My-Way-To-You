@@ -205,6 +205,9 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-section">Writing</div>
       <div class="nav-item" onclick="showTab('tasks',this)"><i class="fas fa-tasks"></i>Tasks</div>
       <div class="nav-item" onclick="showTab('milestones',this)"><i class="fas fa-flag"></i>Milestones</div>
+      <div class="nav-section">Tools</div>
+      <div class="nav-item" onclick="openSearch()"><i class="fas fa-search"></i>Search</div>
+      <div class="nav-item" onclick="showTab('sessions',this)"><i class="fas fa-pen-nib"></i>Sessions</div>
     </div>
     <div class="authors-box">
       <div class="authors-label">Co-Authors</div>
@@ -413,6 +416,30 @@ select.form-input option{background:var(--bg2)}
         <div id="milestones-list" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
 
+      <!-- ═══ SESSIONS ═══ -->
+      <div id="tab-sessions" class="tab">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;flex:1;min-width:120px;text-align:center">
+            <div style="font-size:22px;font-weight:600;color:var(--accent)" id="sess-total-sessions">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Sessions</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;flex:1;min-width:120px;text-align:center">
+            <div style="font-size:22px;font-weight:600;color:var(--green)" id="sess-total-words">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Words Written</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;flex:1;min-width:120px;text-align:center">
+            <div style="font-size:22px;font-weight:600;color:var(--amber)" id="sess-total-time">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Hours Written</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;flex:1;min-width:120px;text-align:center">
+            <div style="font-size:22px;font-weight:600;color:var(--blue)" id="sess-streak">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Day Streak</div>
+          </div>
+        </div>
+        <div style="margin-bottom:16px" id="sess-heatmap"></div>
+        <div id="sessions-list" style="display:flex;flex-direction:column;gap:7px"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -545,40 +572,105 @@ select.form-input option{background:var(--bg2)}
 
 <!-- CHAPTER EDITOR OVERLAY -->
 <div id="chapter-editor-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;flex-wrap:wrap">
     <button class="btn btn-sm" onclick="closeChapterEditor()"><i class="fas fa-arrow-left"></i> Chapters</button>
-    <div style="flex:1;display:flex;align-items:center;gap:10px">
-      <span id="editor-chap-num" style="font-size:12px;color:var(--text3)"></span>
-      <input id="editor-title" style="background:transparent;border:none;font-size:16px;font-weight:600;color:var(--text);outline:none;flex:1" placeholder="Chapter title…"/>
+    <div style="flex:1;display:flex;align-items:center;gap:8px;min-width:160px">
+      <span id="editor-chap-num" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+      <input id="editor-title" style="background:transparent;border:none;font-size:15px;font-weight:600;color:var(--text);outline:none;flex:1;min-width:80px" placeholder="Chapter title…"/>
     </div>
     <select id="editor-status" class="form-input" style="width:auto;padding:5px 10px;font-size:12px">
-      <option value="outline">Outline</option>
-      <option value="draft">Draft</option>
-      <option value="review">In Review</option>
-      <option value="done">Done</option>
+      <option value="outline">Outline</option><option value="draft">Draft</option><option value="review">In Review</option><option value="done">Done</option>
     </select>
-    <div style="font-size:12px;color:var(--text3)" id="editor-wc-display">0 words</div>
-    <button class="btn btn-primary btn-sm" onclick="saveChapterEditor()"><i class="fas fa-save"></i> Save</button>
-    <button class="btn btn-sm" onclick="showEditorTab('brief')" id="btn-brief" style="font-size:11px">Brief</button>
-    <button class="btn btn-sm" onclick="showEditorTab('history')" id="btn-history" style="font-size:11px">History</button>
+    <div style="font-size:12px;color:var(--text3);white-space:nowrap" id="editor-wc-display">0 words</div>
+    <button class="btn btn-primary btn-sm" onclick="saveChapterEditor()" title="Save"><i class="fas fa-save"></i></button>
+    <div style="width:1px;height:20px;background:var(--border)"></div>
+    <button class="btn btn-sm" onclick="toggleReadAloud()" id="btn-readaloud" title="Read aloud"><i class="fas fa-volume-up"></i></button>
+    <button class="btn btn-sm" onclick="showEditorTab('drift')" id="btn-drift" title="Voice drift check" style="font-size:11px"><i class="fas fa-spell-check"></i> Drift</button>
+    <div style="width:1px;height:20px;background:var(--border)"></div>
+    <button class="btn btn-sm" onclick="showEditorTab('notes')" id="btn-notes" style="font-size:11px"><i class="fas fa-comment-alt"></i> Notes</button>
+    <button class="btn btn-sm" onclick="showEditorTab('brief')" id="btn-brief" style="font-size:11px"><i class="fas fa-book-open"></i> Brief</button>
+    <button class="btn btn-sm" onclick="showEditorTab('history')" id="btn-history" style="font-size:11px"><i class="fas fa-history"></i> History</button>
+    <button class="btn btn-sm" onclick="showEditorTab('entry')" id="btn-entry" style="font-size:11px"><i class="fas fa-feather"></i> Entry</button>
   </div>
   <div style="flex:1;display:flex;overflow:hidden">
-    <!-- WRITING AREA -->
     <div id="editor-write-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-      <textarea id="editor-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:40px max(40px,calc(50% - 380px));font-size:15px;line-height:1.8;font-family:Georgia,serif;resize:none;overflow-y:auto" placeholder="Start writing…" oninput="editorWordCount()"></textarea>
+      <textarea id="editor-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:40px max(40px,calc(50% - 380px));font-size:15px;line-height:1.8;font-family:Georgia,serif;resize:none;overflow-y:auto" placeholder="Start writing…" oninput="editorWordCount()" onmouseup="checkTextSelection()" onkeyup="checkTextSelection()"></textarea>
+      <div id="editor-selection-bar" style="display:none;padding:8px 16px;background:var(--bg2);border-top:1px solid var(--border);display:none;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:12px;color:var(--text2)" id="editor-sel-preview"></span>
+        <button class="btn btn-sm btn-primary" onclick="addPassageNote()" style="font-size:11px;padding:4px 10px;margin-left:auto"><i class="fas fa-comment-alt"></i> Note on selection</button>
+      </div>
+    </div>
+    <!-- NOTES PANEL -->
+    <div id="editor-notes-panel" style="width:360px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Co-Author Notes</span>
+        <button class="btn btn-sm btn-primary" onclick="openAddPassageNote()" style="font-size:11px;padding:4px 10px"><i class="fas fa-plus"></i> Add Note</button>
+      </div>
+      <div id="editor-notes-list" style="flex:1;overflow-y:auto;padding:10px"></div>
     </div>
     <!-- BRIEF PANEL -->
-    <div id="editor-brief-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Chapter Brief</div>
+    <div id="editor-brief-panel" style="width:360px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">Chapter Brief</div>
       <div id="editor-brief-content" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--text2);line-height:1.65;white-space:pre-wrap"></div>
     </div>
     <!-- HISTORY PANEL -->
-    <div id="editor-history-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <div id="editor-history-panel" style="width:360px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
         <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Version History</span>
         <button class="btn btn-sm btn-primary" onclick="saveVersion()" style="font-size:11px;padding:4px 10px"><i class="fas fa-bookmark"></i> Save Version</button>
       </div>
       <div id="editor-history-list" style="flex:1;overflow-y:auto;padding:8px"></div>
+    </div>
+    <!-- VOICE DRIFT PANEL -->
+    <div id="editor-drift-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Voice Drift Check</span>
+        <button class="btn btn-sm btn-primary" onclick="runDriftCheck()" style="font-size:11px;padding:4px 10px"><i class="fas fa-search"></i> Check</button>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Checking voice for:</div>
+        <select id="drift-pov" class="form-input" style="font-size:12px;padding:5px 10px">
+          <option value="eli">Eli (his voice)</option>
+          <option value="grace">Grace (her voice)</option>
+          <option value="natalie">Natalie</option>
+          <option value="lucy">Lucy</option>
+        </select>
+      </div>
+      <div id="drift-results" style="flex:1;overflow-y:auto;padding:12px;font-size:13px;color:var(--text2);line-height:1.6">
+        <div style="color:var(--text3);font-size:12px">Click Check to analyze the current chapter text against the Voice Document rules.</div>
+      </div>
+    </div>
+    <!-- ANONYMOUS ENTRY COMPOSER -->
+    <div id="editor-entry-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Anonymous Entry Composer</div>
+        <select id="entry-character" class="form-input" style="font-size:12px;padding:5px 10px;margin-bottom:6px" onchange="updateEntryPrompt()">
+          <option value="grace">Grace — Draft Unsaved</option>
+          <option value="natalie">Natalie — Never Sent</option>
+          <option value="lucy">Lucy — Deleted Recording</option>
+        </select>
+        <div id="entry-format-hint" style="font-size:11px;color:var(--text3);line-height:1.5;padding:6px 8px;background:var(--bg3);border-radius:4px"></div>
+      </div>
+      <textarea id="entry-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:16px;font-size:13px;line-height:1.7;font-family:Georgia,serif;resize:none" placeholder="Write the entry here…"></textarea>
+      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-sm" onclick="copyEntry()" style="flex:1;justify-content:center"><i class="fas fa-copy"></i> Copy</button>
+        <button class="btn btn-sm btn-primary" onclick="saveEntryAsIdea()" style="flex:1;justify-content:center"><i class="fas fa-save"></i> Save to Ideas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSAGE NOTE MODAL -->
+<div class="modal-bg" id="modal-passage-note">
+  <div class="modal">
+    <div class="modal-title">Add Co-Author Note</div>
+    <div class="form-group"><label class="form-label">Passage (optional)</label><textarea class="form-input" id="pn-passage" placeholder="Paste the specific text you're commenting on…" style="min-height:60px"></textarea></div>
+    <div class="form-group"><label class="form-label">Note</label><textarea class="form-input" id="pn-note" placeholder="Your comment, question, or suggestion…" style="min-height:80px"></textarea></div>
+    <div class="form-group"><label class="form-label">Author</label><select class="form-input" id="pn-author"></select></div>
+    <input type="hidden" id="pn-chapter-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-passage-note')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePassageNote()">Save Note</button>
     </div>
   </div>
 </div>
@@ -640,6 +732,39 @@ select.form-input option{background:var(--bg2)}
   </div>
 </div>
 
+<!-- SEARCH OVERLAY -->
+<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;align-items:flex-start;justify-content:center;padding-top:80px" onclick="if(event.target===this)closeSearch()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:600px;max-width:95vw;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <i class="fas fa-search" style="color:var(--text3)"></i>
+      <input id="search-input" style="flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text)" placeholder="Search chapters, ideas, discussion, documents…" oninput="runSearch()" onkeydown="searchKeyNav(event)"/>
+      <button class="btn btn-sm" onclick="closeSearch()" style="padding:4px 10px;font-size:11px">Esc</button>
+    </div>
+    <div id="search-results" style="max-height:420px;overflow-y:auto;padding:8px"></div>
+  </div>
+</div>
+
+<!-- SESSION LOG MODAL -->
+<div class="modal-bg" id="modal-session">
+  <div class="modal">
+    <div class="modal-title" id="modal-sess-title">Log Writing Session</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="sess-date"/></div>
+      <div class="form-group"><label class="form-label">Duration (minutes)</label><input class="form-input" type="number" id="sess-duration" placeholder="e.g. 45"/></div>
+      <div class="form-group"><label class="form-label">Words Written</label><input class="form-input" type="number" id="sess-words" placeholder="e.g. 800"/></div>
+      <div class="form-group"><label class="form-label">Author</label><select class="form-input" id="sess-author"></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Chapter(s) worked on</label><select class="form-input" id="sess-chapter"><option value="">— General / Multiple —</option></select></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="sess-notes" placeholder="What did you work on? How did it go?"></textarea></div>
+    <input type="hidden" id="sess-edit-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-session')">Cancel</button>
+      <button class="btn btn-danger" id="sess-delete-btn" onclick="deleteSession()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveSession()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -682,7 +807,7 @@ let currentAuthorId = null;
 // ─── INIT ─────────────────────────────────────────────────
 async function init() {
   await loadAuthors();
-  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline(),loadTasks(),loadMilestones()]);
+  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline(),loadTasks(),loadMilestones(),loadSessions()]);
   renderDashboard();
   setupRealtime();
   setupDragDrop();
@@ -1115,6 +1240,7 @@ const tabConfig = {
   timeline:{title:'Timeline & Plot Map', action:'Add Event', actionFn:()=>openAddEvent()},
   tasks:{title:'Tasks', action:'Add Task', actionFn:()=>openAddTask()},
   milestones:{title:'Milestones', action:'Add Milestone', actionFn:()=>openAddMilestone()},
+  sessions:{title:'Writing Sessions', action:'Log Session', actionFn:()=>openAddSession()},
 };
 
 function showTab(tab, el) {
@@ -1135,6 +1261,7 @@ function showTab(tab, el) {
   if(tab==='timeline') renderTimeline();
   if(tab==='tasks') { populateTaskChapterSelect(); populateTaskAuthorSelect(); renderTasks(); }
   if(tab==='milestones') renderMilestones();
+  if(tab==='sessions') renderSessions();
   if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
 }
 
@@ -1767,6 +1894,9 @@ function openChapterEditor(id) {
   editorWordCount();
   showEditorTab('write');
   loadVersionHistory(id);
+  loadPassageNotes(id).then(()=>renderPassageNotes());
+  updateEntryPrompt();
+  if(ttsActive) { speechSynthesis.cancel(); ttsActive=false; }
   const overlay = document.getElementById('chapter-editor-overlay');
   overlay.style.display = 'flex';
   document.getElementById('editor-body').focus();
@@ -2104,6 +2234,393 @@ async function seedChaptersFromSpine() {
   renderChapters();
   renderDashboard();
   toast('All 36 chapters loaded!');
+}
+
+// ─── READ ALOUD ───────────────────────────────────────────
+let ttsUtterance = null, ttsActive = false;
+
+function toggleReadAloud() {
+  const btn = document.getElementById('btn-readaloud');
+  if(ttsActive) {
+    speechSynthesis.cancel();
+    ttsActive = false;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    toast('Read aloud stopped');
+    return;
+  }
+  const text = document.getElementById('editor-body').value.trim();
+  if(!text) { toast('Nothing to read — write some text first'); return; }
+  ttsUtterance = new SpeechSynthesisUtterance(text);
+  ttsUtterance.rate = 0.92;
+  ttsUtterance.pitch = 1;
+  ttsUtterance.onend = () => { ttsActive=false; btn.style.color=''; btn.style.borderColor=''; };
+  ttsUtterance.onerror = () => { ttsActive=false; btn.style.color=''; btn.style.borderColor=''; };
+  speechSynthesis.speak(ttsUtterance);
+  ttsActive = true;
+  btn.style.color = 'var(--accent)';
+  btn.style.borderColor = 'var(--accent)';
+  toast('Reading aloud… click again to stop');
+}
+
+// ─── VOICE DRIFT CHECK ────────────────────────────────────
+const DRIFT_RULES = {
+  eli: [
+    {label:'Missing film/pop culture references', severity:'warn', check: t => t.length>300 && !/(film|movie|scene|cut|frame|episode|album|song|track|director|character|watch|saw|listen)/i.test(t), msg:'Eli\'s chapters typically contain film/TV/music references. None detected — is this intentional for Part 4?'},
+    {label:'Uses the word "love" about Grace', severity:'error', check: t => /\blove\b.{0,60}(grace|her|she)/i.test(t), msg:'Eli never uses "love" in relation to Grace until Part 4 — and even then not directly. Flag if this is Part 1-3.'},
+    {label:'Interior warmth without external anchor', severity:'warn', check: t => { const warm = (t.match(/\bfeel\b|\bfelt\b|\bemotion\b|\bheart\b/gi)||[]).length; return warm > 4; }, msg:`High interior emotional language detected (${0} instances). Eli processes externally — he should be describing what he sees/hears, not what he feels directly. Risk of voice drift into Grace's register.`},
+    {label:'Sentence compression check on Grace', severity:'info', check: t => { const graceParas = t.split('\n').filter(p=>p.toLowerCase().includes('grace')); return graceParas.some(p=>p.split(/[.!?]/).filter(s=>s.trim().length>80).length>2); }, msg:'One or more paragraphs about Grace contain long sentences. Eli\'s sentences about her should be shorter than sentences about other characters — the compression is unconscious.'},
+    {label:'Unfinished thought check', severity:'info', check: t => !/—|\.\.\./.test(t) && t.length > 400, msg:'No em-dashes or ellipses detected. Eli\'s Part 3+ voice uses interrupted/trailing thoughts as his framing starts failing. Consider whether this chapter needs them.'},
+  ],
+  grace: [
+    {label:'Physical description of Eli', severity:'error', check: t => /(his eyes|his hair|his hands|his face|his voice|his smile|he looked|he was tall|he was wearing|his jaw|his shoulders)/i.test(t), msg:'GRACE NEVER DESCRIBES ELI PHYSICALLY. That absence is the loudest thing in her chapters. Remove or rework any physical description of him.'},
+    {label:'Uses "love" about Eli', severity:'error', check: t => /\blove\b.{0,60}(eli|him|he )/i.test(t), msg:'Grace never names what she feels about him. She describes his behavior, his effect on rooms, what he said — never what it costs her. Remove direct love language.'},
+    {label:'Metaphor about feelings for Eli', severity:'error', check: t => /(like a|feels like|as if|reminds me of).{0,40}(eli|him|he )/i.test(t), msg:'Grace never reaches for a metaphor to describe what she feels around him. She is precise about everything except this. The imprecision is the evidence — don\'t give her the precision.'},
+    {label:'Missing humor', severity:'warn', check: t => t.length>300 && !/(laugh|joke|funny|smile|smirk|wry|absurd|ridiculous|honestly|obviously)/i.test(t), msg:'No humor detected. Grace\'s voice is warm and funny — her humor arrives at sentence level. If approaching something she isn\'t ready to name, a joke should appear.'},
+    {label:'Sentence completing a thought about Eli', severity:'warn', check: t => /(i think about eli|i think about him|what i feel|how i feel about)/i.test(t), msg:'Grace never lets herself finish the thought that starts when he gets through her filing system. She moves on. Quickly. The speed of the pivot is the tell.'},
+  ],
+  natalie: [
+    {label:'Tone check — is it slightly composed?', severity:'info', check: t => false, msg:'Natalie\'s voice is polished and slightly arranged — everything delivered with poise. Her entries feel addressed to someone (the "you" is present). Check that her voice has this quality.'},
+    {label:'Never Sent format reminder', severity:'info', check: t => false, msg:'Natalie writes in Never Sent format — letters written to someone. Should feel intimate and slightly formal. The "you" should be present even if unnamed.'},
+  ],
+  lucy: [
+    {label:'Deleted Recording format reminder', severity:'info', check: t => false, msg:'Lucy\'s format is Deleted Recording — voice memos started and erased. Should feel conversational, self-interrupting, starting one place and ending somewhere else. Less structured than Natalie.'},
+    {label:'Self-awareness check', severity:'info', check: t => false, msg:'Lucy is self-aware enough to notice she\'s being evasive. Her entries should acknowledge the evasion even as they perform it.'},
+  ]
+};
+
+function runDriftCheck() {
+  const text = document.getElementById('editor-body').value;
+  const pov = document.getElementById('drift-pov').value;
+  const rules = DRIFT_RULES[pov]||[];
+  const results = document.getElementById('drift-results');
+
+  if(!text.trim()) { results.innerHTML='<div style="color:var(--text3);font-size:12px">No text to check. Write some content first.</div>'; return; }
+
+  const findings = [];
+  rules.forEach(rule => {
+    try {
+      if(rule.check(text)) {
+        findings.push({...rule});
+      }
+    } catch(e) {}
+  });
+
+  if(!findings.length) {
+    results.innerHTML=`<div style="padding:12px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:8px;color:var(--green);font-size:13px"><i class="fas fa-check-circle" style="margin-right:6px"></i>No drift issues detected for ${pov.charAt(0).toUpperCase()+pov.slice(1)}'s voice. The chapter appears consistent with the Voice Document rules.</div>`;
+    return;
+  }
+
+  const sColors = {error:'var(--red)',warn:'var(--amber)',info:'var(--blue)'};
+  const sIcons = {error:'fa-exclamation-circle',warn:'fa-exclamation-triangle',info:'fa-info-circle'};
+  results.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${findings.length} issue${findings.length!==1?'s':''} found for ${pov.charAt(0).toUpperCase()+pov.slice(1)}:</div>`+
+    findings.map(f=>`<div style="padding:10px 12px;margin-bottom:8px;border-radius:8px;background:${sColors[f.severity]}11;border:1px solid ${sColors[f.severity]}33">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><i class="fas ${sIcons[f.severity]}" style="color:${sColors[f.severity]};font-size:12px"></i><span style="font-size:12px;font-weight:600;color:var(--text)">${f.label}</span></div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">${f.msg}</div>
+    </div>`).join('');
+}
+
+// ─── CO-AUTHOR PASSAGE NOTES ──────────────────────────────
+let passageNotes = [];
+
+function checkTextSelection() {
+  const sel = window.getSelection();
+  const bar = document.getElementById('editor-selection-bar');
+  if(sel && sel.toString().trim().length > 10) {
+    document.getElementById('editor-sel-preview').textContent = '"'+sel.toString().trim().slice(0,60)+(sel.toString().trim().length>60?'…':'')+'"';
+    bar.style.display='flex';
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function addPassageNote() {
+  const sel = window.getSelection();
+  const passage = sel?sel.toString().trim():'';
+  document.getElementById('pn-passage').value=passage;
+  document.getElementById('pn-note').value='';
+  document.getElementById('pn-chapter-id').value=editorChapterId||'';
+  const pnSel=document.getElementById('pn-author');
+  pnSel.innerHTML=authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+  openModal('modal-passage-note');
+}
+
+function openAddPassageNote() {
+  document.getElementById('pn-passage').value='';
+  document.getElementById('pn-note').value='';
+  document.getElementById('pn-chapter-id').value=editorChapterId||'';
+  const pnSel=document.getElementById('pn-author');
+  pnSel.innerHTML=authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+  openModal('modal-passage-note');
+}
+
+async function savePassageNote() {
+  const payload={chapter_id:document.getElementById('pn-chapter-id').value||null,passage:document.getElementById('pn-passage').value.trim(),note:document.getElementById('pn-note').value.trim(),author_id:document.getElementById('pn-author').value||null};
+  if(!payload.note){toast('Note cannot be empty');return;}
+  await sb('passage_notes',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});
+  closeModal('modal-passage-note');
+  toast('Note saved');
+  await loadPassageNotes(editorChapterId);
+  renderPassageNotes();
+}
+
+async function loadPassageNotes(chapterId) {
+  if(!chapterId) return;
+  const d = await sb(`passage_notes?chapter_id=eq.${chapterId}&order=created_at.desc`);
+  if(d) passageNotes=d;
+}
+
+function renderPassageNotes() {
+  const el=document.getElementById('editor-notes-list');
+  if(!passageNotes.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center">No notes yet for this chapter</div>';return;}
+  el.innerHTML=passageNotes.map(n=>{
+    const auth=authors.find(a=>a.id===n.author_id);
+    return `<div style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px">
+      ${n.passage?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-bottom:6px;padding:6px 8px;background:var(--bg2);border-radius:4px;border-left:2px solid var(--accent)">"${escHtml(n.passage.slice(0,80))}${n.passage.length>80?'…':''}"</div>`:''}
+      <div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:6px">${escHtml(n.note)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${auth?`<div style="width:18px;height:18px;border-radius:50%;background:${auth.color}22;color:${auth.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${auth.name.slice(0,1)}</div><span style="font-size:11px;color:var(--text3)">${escHtml(auth.name)}</span>`:''}
+          <span style="font-size:10px;color:var(--text3)">· ${timeAgo(n.created_at)}</span>
+        </div>
+        <button onclick="deletePassageNote('${n.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 4px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'"><i class="fas fa-times"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deletePassageNote(id) {
+  if(!confirm('Delete this note?'))return;
+  await sb(`passage_notes?id=eq.${id}`,{method:'DELETE'});
+  await loadPassageNotes(editorChapterId);
+  renderPassageNotes();
+  toast('Note deleted');
+}
+
+// ─── ANONYMOUS ENTRY COMPOSER ─────────────────────────────
+const ENTRY_HINTS = {
+  grace: {hint:"Grace writes to understand, not to communicate.\n\n• Lowercase throughout\n• Fragmented — incomplete sentences are deliberate\n• Deceptively simple on the surface\n• Emotional weight lives UNDERNEATH the plainness\n• What she doesn't finish is where the reader lives\n• Never confirms anything directly\n• Format: Draft Unsaved (phone notes, fragments)"},
+  natalie: {hint:"Natalie communicates even when she doesn't send it.\n\n• Slightly polished — she knows how to arrange feelings into sentences\n• Writes TO someone — 'you' is present, unnamed\n• Intimate but with poise\n• Trying to reach closure through writing\n• Slightly formal — the Never Sent format shows\n• Never confirms anything directly\n• Format: Never Sent (unsent letters, abandoned drafts)"},
+  lucy: {hint:"Lucy talks to think.\n\n• Conversational, unfinished, self-interrupting\n• Starts one place, ends somewhere else\n• Self-aware enough to notice she's being evasive\n• Less structured than Natalie\n• Voice memos often trail off mid-thought\n• Never confirms anything directly\n• Format: Deleted Recording (voice memos started and erased)\n• End with: [Recording ends.]"}
+};
+
+function updateEntryPrompt() {
+  const char=document.getElementById('entry-character').value;
+  const hint=ENTRY_HINTS[char];
+  if(hint) document.getElementById('entry-format-hint').textContent=hint.hint;
+}
+
+function copyEntry() {
+  const text=document.getElementById('entry-body').value;
+  if(!text){toast('Nothing to copy');return;}
+  navigator.clipboard.writeText(text).then(()=>toast('Entry copied to clipboard!')).catch(()=>toast('Select all and copy manually'));
+}
+
+async function saveEntryAsIdea() {
+  const text=document.getElementById('entry-body').value.trim();
+  if(!text){toast('Nothing to save');return;}
+  const char=document.getElementById('entry-character').value;
+  const content=`[Anonymous Entry — ${char.charAt(0).toUpperCase()+char.slice(1)} voice]\n\n${text}`;
+  await sb('ideas',{method:'POST',body:JSON.stringify({category:'misc',content,author_id:currentAuthorId}),headers:{...h,'Prefer':'return=representation'}});
+  await loadIdeas();
+  toast('Entry saved to Idea Board!');
+}
+
+// ─── SEARCH ───────────────────────────────────────────────
+let searchTimeout = null;
+
+function openSearch() {
+  const overlay=document.getElementById('search-overlay');
+  overlay.style.display='flex';
+  setTimeout(()=>document.getElementById('search-input').focus(),50);
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').style.display='none';
+  document.getElementById('search-input').value='';
+  document.getElementById('search-results').innerHTML='';
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openSearch();}
+  if(e.key==='Escape'&&document.getElementById('search-overlay').style.display==='flex') closeSearch();
+});
+
+function runSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(()=>{
+    const q=document.getElementById('search-input').value.trim().toLowerCase();
+    const el=document.getElementById('search-results');
+    if(q.length<2){el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);text-align:center">Type at least 2 characters to search…</div>';return;}
+    const results=[];
+    // Search chapters
+    chapters.forEach(c=>{
+      if(c.title.toLowerCase().includes(q)||(c.notes||'').toLowerCase().includes(q)||(c.body||'').toLowerCase().includes(q)){
+        const snippet = (c.body||c.notes||'').toLowerCase().indexOf(q);
+        const preview = snippet>=0?(c.body||c.notes||'').slice(Math.max(0,snippet-30),snippet+80):'';
+        results.push({type:'chapter',icon:'fa-list-ol',color:'var(--accent)',label:`Ch. ${c.number} — ${c.title}`,preview,action:`openChapterEditor('${c.id}');closeSearch()`});
+      }
+    });
+    // Search ideas
+    ideas.forEach(i=>{
+      if(i.content.toLowerCase().includes(q)){
+        results.push({type:'idea',icon:'fa-lightbulb',color:'var(--amber)',label:i.content.slice(0,60)+(i.content.length>60?'…':''),preview:'',action:`showTab('ideas',document.querySelector('[onclick*=ideas]'));closeSearch()`});
+      }
+    });
+    // Search discussion
+    discussion.forEach(m=>{
+      if(m.content.toLowerCase().includes(q)){
+        const auth=authors.find(a=>a.id===m.author_id);
+        results.push({type:'discussion',icon:'fa-comments',color:'var(--green)',label:`${auth?auth.name:'Unknown'}: ${m.content.slice(0,60)}`,preview:'',action:`showTab('discuss',document.querySelector('[onclick*=discuss]'));closeSearch()`});
+      }
+    });
+    // Search documents
+    documents.forEach(d=>{
+      if(d.name.toLowerCase().includes(q)){
+        results.push({type:'document',icon:'fa-file-alt',color:'var(--blue)',label:d.name,preview:'',action:`viewDocument('${d.id}');closeSearch()`});
+      }
+    });
+    if(!results.length){el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);text-align:center">No results for "'+escHtml(q)+'"</div>';return;}
+    el.innerHTML=results.slice(0,15).map((r,i)=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'" onclick="${r.action}">
+        <div style="width:28px;height:28px;border-radius:6px;background:${r.color}22;color:${r.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px"><i class="fas ${r.icon}" style="font-size:12px"></i></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.label)}</div>
+          ${r.preview?`<div style="font-size:11px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">…${escHtml(r.preview)}…</div>`:''}
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:capitalize">${r.type}</div>
+        </div>
+      </div>`).join('');
+  }, 200);
+}
+
+function searchKeyNav(e) {
+  if(e.key==='Escape') closeSearch();
+}
+
+// ─── WRITING SESSIONS ─────────────────────────────────────
+let sessions=[];
+
+async function loadSessions() {
+  const d=await sb('writing_sessions?order=session_date.desc&limit=100');
+  if(d===null){console.warn('writing_sessions table missing');return;}
+  sessions=d;
+}
+
+function renderSessions() {
+  const total=sessions.length;
+  const totalWords=sessions.reduce((s,x)=>s+(x.words_written||0),0);
+  const totalMins=sessions.reduce((s,x)=>s+(x.duration_minutes||0),0);
+  document.getElementById('sess-total-sessions').textContent=total||'0';
+  document.getElementById('sess-total-words').textContent=totalWords>=1000?(totalWords/1000).toFixed(1)+'k':totalWords||'0';
+  document.getElementById('sess-total-time').textContent=totalMins>=60?(totalMins/60).toFixed(1)+'h':totalMins+'m';
+
+  // Streak
+  const dates=[...new Set(sessions.map(s=>s.session_date))].sort().reverse();
+  let streak=0;
+  const today=new Date().toISOString().slice(0,10);
+  let check=today;
+  for(const d of dates){
+    if(d===check){streak++;const dt=new Date(check);dt.setDate(dt.getDate()-1);check=dt.toISOString().slice(0,10);}
+    else break;
+  }
+  document.getElementById('sess-streak').textContent=streak+'🔥';
+
+  // Heatmap (last 30 days)
+  const heatmap=document.getElementById('sess-heatmap');
+  const days30=[];
+  for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days30.push(d.toISOString().slice(0,10));}
+  const byDate={};
+  sessions.forEach(s=>{if(!byDate[s.session_date])byDate[s.session_date]=0;byDate[s.session_date]+=(s.words_written||0);});
+  const maxWc=Math.max(...Object.values(byDate),1);
+  heatmap.innerHTML=`<div style="margin-bottom:8px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Last 30 Days</div><div style="display:flex;gap:3px;flex-wrap:wrap">${days30.map(d=>{const wc=byDate[d]||0;const opacity=wc?Math.max(0.2,wc/maxWc):0;const bg=wc?`rgba(139,124,246,${opacity})`:'var(--bg3)';return`<div title="${d}: ${wc} words" style="width:20px;height:20px;border-radius:3px;background:${bg};border:1px solid var(--border)"></div>`;}).join('')}</div>`;
+
+  const el=document.getElementById('sessions-list');
+  if(!sessions.length){el.innerHTML='<div class="empty-state"><i class="fas fa-pen-nib"></i><p>No sessions logged yet — track your writing progress!</p></div>';return;}
+  el.innerHTML=sessions.slice(0,30).map(s=>{
+    const auth=authors.find(a=>a.id===s.author_id);
+    const chap=chapters.find(c=>c.id===s.chapter_id);
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditSession('${s.id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--text)">${new Date(s.session_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+        ${auth?`<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:${auth.color}22;color:${auth.color}">${escHtml(auth.name)}</span>`:''}
+        ${chap?`<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Ch. ${chap.number}</span>`:''}
+      </div>
+      <div style="display:flex;gap:14px">
+        ${s.words_written?`<span style="font-size:12px;color:var(--green)"><i class="fas fa-pen" style="margin-right:4px"></i>${s.words_written.toLocaleString()} words</span>`:''}
+        ${s.duration_minutes?`<span style="font-size:12px;color:var(--amber)"><i class="fas fa-clock" style="margin-right:4px"></i>${s.duration_minutes} min</span>`:''}
+      </div>
+      ${s.notes?`<div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.4">${escHtml(s.notes.slice(0,100))}${s.notes.length>100?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openAddSession() {
+  document.getElementById('modal-sess-title').textContent='Log Writing Session';
+  document.getElementById('sess-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('sess-duration').value='';
+  document.getElementById('sess-words').value='';
+  document.getElementById('sess-notes').value='';
+  document.getElementById('sess-edit-id').value='';
+  document.getElementById('sess-delete-btn').style.display='none';
+  const asel=document.getElementById('sess-author');
+  asel.innerHTML='<option value="">— Select —</option>'+authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+  const csel=document.getElementById('sess-chapter');
+  csel.innerHTML='<option value="">— General / Multiple —</option>'+chapters.map(c=>`<option value="${c.id}">Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  openModal('modal-session');
+}
+
+function openEditSession(id) {
+  const s=sessions.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('modal-sess-title').textContent='Edit Session';
+  document.getElementById('sess-date').value=s.session_date||'';
+  document.getElementById('sess-duration').value=s.duration_minutes||'';
+  document.getElementById('sess-words').value=s.words_written||'';
+  document.getElementById('sess-notes').value=s.notes||'';
+  document.getElementById('sess-edit-id').value=id;
+  document.getElementById('sess-delete-btn').style.display='inline-flex';
+  const asel=document.getElementById('sess-author');
+  asel.innerHTML='<option value="">— Select —</option>'+authors.map(a=>`<option value="${a.id}"${a.id===s.author_id?' selected':''}>${escHtml(a.name)}</option>`).join('');
+  const csel=document.getElementById('sess-chapter');
+  csel.innerHTML='<option value="">— General / Multiple —</option>'+chapters.map(c=>`<option value="${c.id}"${c.id===s.chapter_id?' selected':''}>Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  openModal('modal-session');
+}
+
+async function saveSession() {
+  const payload={session_date:document.getElementById('sess-date').value||new Date().toISOString().slice(0,10),duration_minutes:parseInt(document.getElementById('sess-duration').value)||null,words_written:parseInt(document.getElementById('sess-words').value)||null,author_id:document.getElementById('sess-author').value||null,chapter_id:document.getElementById('sess-chapter').value||null,notes:document.getElementById('sess-notes').value.trim()};
+  const eid=document.getElementById('sess-edit-id').value;
+  if(eid){await sb(`writing_sessions?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)});toast('Session updated');}
+  else{await sb('writing_sessions',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});toast('Session logged!');logActivity(`Logged a writing session`);}
+  closeModal('modal-session');
+  await loadSessions();renderSessions();
+}
+
+async function deleteSession() {
+  const eid=document.getElementById('sess-edit-id').value;
+  if(!eid||!confirm('Delete this session?'))return;
+  await sb(`writing_sessions?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-session');
+  await loadSessions();renderSessions();
+  toast('Session deleted');
+}
+
+// Update editor showEditorTab to include new panels
+function showEditorTab(tab) {
+  ['notes','brief','history','drift','entry'].forEach(t=>{
+    const el=document.getElementById(`editor-${t}-panel`);
+    if(el) el.style.display='none';
+  });
+  ['btn-notes','btn-brief','btn-history','btn-drift','btn-entry'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn){btn.style.background='transparent';btn.style.color='var(--text)';}
+  });
+  if(tab==='write') return;
+  const panel=document.getElementById(`editor-${tab}-panel`);
+  if(panel) panel.style.display='flex';
+  const btn=document.getElementById(`btn-${tab}`);
+  if(btn){btn.style.background='var(--accent)';btn.style.color='#fff';}
+  if(tab==='notes'){loadPassageNotes(editorChapterId).then(()=>renderPassageNotes());}
+  if(tab==='entry'){updateEntryPrompt();}
 }
 
 // ─── BOOT ─────────────────────────────────────────────────
