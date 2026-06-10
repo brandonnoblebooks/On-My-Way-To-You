@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>On My Way To You — Collaboration Hub</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f13;
+  --bg2: #16161d;
+  --bg3: #1e1e28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8e8f0;
+  --text2: #9090a8;
+  --text3: #5a5a72;
+  --accent: #8b7cf6;
+  --accent2: #6d5ce6;
+  --accent-glow: rgba(139,124,246,0.18);
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.app{display:flex;height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.novel-title{font-size:15px;font-weight:600;color:var(--text);line-height:1.3}
+.novel-sub{font-size:11px;color:var(--text3);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
+.nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-section{padding:14px 16px 4px;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);font-size:13.5px;border-left:2px solid transparent;transition:all .15s;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--bg3)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-glow);font-weight:500}
+.nav-item i{width:16px;text-align:center;font-size:14px}
+.authors-box{margin:10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:12px}
+.authors-label{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.author-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.author-row:last-child{margin-bottom:0}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.author-name-edit{flex:1;background:transparent;border:none;color:var(--text);font-size:12px;padding:0;cursor:pointer;outline:none}
+.author-name-edit:hover{color:var(--accent)}
+.author-name-edit:focus{border-bottom:1px solid var(--accent);cursor:text}
+.online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.page-title{font-size:16px;font-weight:600;color:var(--text)}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg3);border-color:var(--border2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:rgba(248,113,113,.1)}
+.content{flex:1;overflow-y:auto;padding:20px}
+.tab{display:none}
+.tab.active{display:block}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;height:120px;color:var(--text3);gap:10px;font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* DASHBOARD */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-val{font-size:24px;font-weight:600;color:var(--accent)}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.section-heading{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.activity-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;margin-top:1px}
+.activity-text{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.activity-text strong{color:var(--text)}
+.activity-time{font-size:11px;color:var(--text3);white-space:nowrap}
+.progress-wrap{margin-top:6px}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.progress-bar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+
+/* CHAPTERS */
+.chapter-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.chapter-card:hover{border-color:var(--border2)}
+.chapter-top{display:flex;align-items:center;gap:10px}
+.chap-num{font-size:11px;color:var(--text3);min-width:50px}
+.chap-title{flex:1;font-size:14px;color:var(--text);font-weight:500}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
+.badge-outline{background:var(--bg3);color:var(--text2)}
+.badge-draft{background:rgba(96,165,250,.15);color:var(--blue)}
+.badge-review{background:rgba(251,191,36,.15);color:var(--amber)}
+.badge-done{background:rgba(52,211,153,.15);color:var(--green)}
+.chap-meta{font-size:11px;color:var(--text3);margin-top:6px}
+
+/* IDEAS */
+.ideas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.idea-card{border-radius:var(--radius);padding:14px;cursor:default;position:relative;min-height:100px}
+.idea-card-header{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px;opacity:.75}
+.idea-body{font-size:13px;line-height:1.55}
+.idea-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.idea-author{font-size:11px;opacity:.6}
+.idea-del{background:none;border:none;cursor:pointer;opacity:.4;color:inherit;padding:2px 4px;border-radius:3px;font-size:11px}
+.idea-del:hover{opacity:.9}
+.cat-plot{background:#1e1a3a;color:#c4b5fd}
+.cat-character{background:#0f2a22;color:#6ee7b7}
+.cat-world{background:#2a1f0a;color:#fcd34d}
+.cat-theme{background:#2a150f;color:#fca5a5}
+.cat-misc{background:var(--bg3);color:var(--text2)}
+
+/* DOCUMENTS */
+.doc-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:16px;transition:all .15s;cursor:pointer}
+.doc-upload-zone:hover,.doc-upload-zone.drag-over{border-color:var(--accent);background:var(--accent-glow)}
+.doc-upload-zone i{font-size:28px;color:var(--accent);margin-bottom:8px}
+.doc-upload-zone p{color:var(--text2);font-size:13px}
+.doc-upload-zone small{color:var(--text3);font-size:11px}
+.doc-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;transition:border-color .15s}
+.doc-row:hover{border-color:var(--border2)}
+.doc-icon{font-size:22px;flex-shrink:0}
+.doc-info{flex:1;min-width:0}
+.doc-name{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.doc-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* DOCUMENT VIEWER */
+.viewer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;flex-direction:column}
+.viewer-overlay.open{display:flex}
+.viewer-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.viewer-title{flex:1;font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer-body{flex:1;overflow:auto;padding:20px;background:var(--bg)}
+.viewer-content{max-width:800px;margin:0 auto;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:32px;line-height:1.7;color:var(--text)}
+.viewer-content h1,.viewer-content h2,.viewer-content h3{margin:1em 0 .5em;color:var(--text)}
+.viewer-content p{margin-bottom:.8em}
+.viewer-content ul,.viewer-content ol{margin-left:1.5em;margin-bottom:.8em}
+.viewer-pdf-canvas{display:block;max-width:100%;margin:0 auto;border-radius:var(--radius-sm)}
+.pdf-nav{display:flex;align-items:center;gap:12px;justify-content:center;padding:12px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
+.pdf-page-info{font-size:13px;color:var(--text2)}
+
+/* DISCUSSION */
+.discussion-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg-bubble{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px}
+.msg-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.msg-name{font-size:13px;font-weight:600;color:var(--text)}
+.msg-time{font-size:11px;color:var(--text3)}
+.msg-text{font-size:13px;color:var(--text2);line-height:1.55;white-space:pre-wrap}
+.compose-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;gap:10px;align-items:flex-end}
+.compose-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--text);resize:none;min-height:42px;max-height:120px;outline:none;font-family:inherit}
+.compose-input::placeholder{color:var(--text3)}
+.compose-input:focus{border-color:var(--accent)}
+
+/* MODALS */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:22px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px}
+.form-group{margin-bottom:13px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:block}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);outline:none;font-family:inherit}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input option{background:var(--bg2)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:11px 16px;font-size:13px;color:var(--text);z-index:999;transform:translateY(60px);opacity:0;transition:all .25s;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-state i{font-size:32px;margin-bottom:10px;display:block;color:var(--text3)}
+.empty-state p{font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="novel-title">On My Way To You</div>
+      <div class="novel-sub">Collaboration Hub</div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Workspace</div>
+      <div class="nav-item active" onclick="showTab('dashboard',this)"><i class="fas fa-home"></i>Dashboard</div>
+      <div class="nav-item" onclick="showTab('chapters',this)"><i class="fas fa-list-ol"></i>Chapters</div>
+      <div class="nav-item" onclick="showTab('ideas',this)"><i class="fas fa-lightbulb"></i>Idea Board</div>
+      <div class="nav-item" onclick="showTab('docs',this)"><i class="fas fa-folder-open"></i>Documents</div>
+      <div class="nav-item" onclick="showTab('discuss',this)"><i class="fas fa-comments"></i>Discussion</div>
+      <div class="nav-item" onclick="showTab('meet',this)"><i class="fas fa-video"></i>Meet</div>
+      <div class="nav-section">Story Tools</div>
+      <div class="nav-item" onclick="showTab('ai',this)"><i class="fas fa-robot"></i>AI Assistant</div>
+      <div class="nav-item" onclick="showTab('characters',this)"><i class="fas fa-users"></i>Characters</div>
+      <div class="nav-item" onclick="showTab('timeline',this)"><i class="fas fa-stream"></i>Timeline</div>
+    </div>
+    <div class="authors-box">
+      <div class="authors-label">Co-Authors</div>
+      <div id="authors-list">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="openAddAuthor()"><i class="fas fa-plus"></i> Add Author</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="topbar-right" id="topbar-right">
+        <button class="btn btn-primary" onclick="topbarAction()"><i class="fas fa-plus" id="topbar-icon"></i><span id="topbar-label">New Chapter</span></button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard" class="tab active">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="stat-chapters">—</div><div class="stat-lbl">Chapters</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-words">—</div><div class="stat-lbl">Words</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-ideas">—</div><div class="stat-lbl">Ideas</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-docs">—</div><div class="stat-lbl">Documents</div></div>
+        </div>
+        <div class="section-heading">Overall Progress</div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="progress-wrap">
+            <div class="progress-label"><span>Word Count Goal</span><span id="wc-label">0 / 80,000</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="wc-bar" style="width:0%"></div></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px" id="wc-pct">0% complete</div>
+          </div>
+        </div>
+        <div class="section-heading">Recent Activity</div>
+        <div class="card" id="activity-list">
+          <div class="loading"><div class="spinner"></div> Loading activity…</div>
+        </div>
+      </div>
+
+      <!-- CHAPTERS -->
+      <div id="tab-chapters" class="tab">
+        <div id="chapters-list"><div class="loading"><div class="spinner"></div> Loading chapters…</div></div>
+      </div>
+
+      <!-- IDEAS -->
+      <div id="tab-ideas" class="tab">
+        <div class="ideas-grid" id="ideas-grid"></div>
+        <div id="ideas-empty" class="empty-state" style="display:none"><i class="fas fa-lightbulb"></i><p>No ideas yet — add the first one!</p></div>
+      </div>
+
+      <!-- DOCUMENTS -->
+      <div id="tab-docs" class="tab">
+        <div class="doc-upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <input type="file" id="file-input" style="display:none" multiple accept=".pdf,.docx,.doc,.txt,.md" onchange="handleFileSelect(event)"/>
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>Click to upload or drag & drop</p>
+          <small>PDF, DOCX, DOC, TXT, MD supported</small>
+        </div>
+        <div id="docs-list"><div class="loading"><div class="spinner"></div> Loading documents…</div></div>
+      </div>
+
+      <!-- MEET -->
+      <div id="tab-meet" class="tab">
+        <div style="max-width:720px;margin:0 auto">
+          <div class="card" style="margin-bottom:16px;text-align:center;padding:28px 20px">
+            <i class="fas fa-video" style="font-size:36px;color:var(--accent);margin-bottom:12px;display:block"></i>
+            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Start a Video Meeting</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto">Your private room is always waiting — no accounts, no installs. Share the room name with your co-author and you're both in.</div>
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden">
+                <span style="padding:8px 12px;font-size:13px;color:var(--text3);border-right:1px solid var(--border2);white-space:nowrap">meet.jit.si/</span>
+                <input id="room-name" class="form-input" style="border:none;border-radius:0;width:200px;background:transparent" placeholder="on-my-way-to-you" value="on-my-way-to-you"/>
+              </div>
+              <button class="btn btn-primary" onclick="launchMeet()"><i class="fas fa-video"></i> Join Room</button>
+              <button class="btn" onclick="copyRoomLink()"><i class="fas fa-copy"></i> Copy Link</button>
+              <button class="btn" onclick="postMeetToDiscussion()"><i class="fas fa-paper-plane"></i> Post to Discussion</button>
+            </div>
+          </div>
+
+          <div class="card" style="padding:0;overflow:hidden">
+            <div id="jitsi-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:420px;background:var(--bg3);gap:14px">
+              <i class="fas fa-video" style="font-size:48px;color:var(--text3)"></i>
+              <div style="font-size:13px;color:var(--text3)">Click "Join Room" to start your meeting here</div>
+            </div>
+            <iframe id="jitsi-frame" style="display:none;width:100%;height:520px;border:none" allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
+          </div>
+
+          <div class="card" style="margin-top:12px">
+            <div class="section-heading" style="margin-bottom:10px">Tips</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-lock" style="color:var(--accent);margin-right:6px"></i>Your room is private — only people with the exact name can join</div>
+              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-share-alt" style="color:var(--accent);margin-right:6px"></i>Use "Post to Discussion" to send the link to your co-author instantly</div>
+              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-user" style="color:var(--accent);margin-right:6px"></i>No account needed — just open the link and go</div>
+              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-pencil-alt" style="color:var(--accent);margin-right:6px"></i>Rename the room anything you like — make it unique for extra privacy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="tab-discuss" class="tab">
+        <div class="discussion-wrap" id="discussion-list">
+          <div class="loading"><div class="spinner"></div> Loading discussion…</div>
+        </div>
+        <div class="compose-box">
+          <div class="av" id="compose-av" style="background:#8b7cf6;color:#fff;width:30px;height:30px;font-size:11px;flex-shrink:0">?</div>
+          <textarea class="compose-input" id="compose-input" placeholder="Add to the discussion…" rows="1" onkeydown="handleCompose(event)" oninput="autoResize(this)"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;padding:0 4px">
+          Writing as: <select id="compose-author-select" class="form-input" style="display:inline-block;width:auto;padding:2px 8px;font-size:11px" onchange="updateComposeAuthor()"></select>
+        </div>
+      </div>
+
+      <!-- ═══ AI ASSISTANT ═══ -->
+      <div id="tab-ai" class="tab" style="padding:0;margin:-20px;height:calc(100vh - 54px)">
+        <div style="display:flex;height:100%;overflow:hidden">
+          <div style="width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column">
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Chats</span>
+              <button class="btn btn-sm btn-primary" onclick="aiNewChat()" style="padding:4px 10px;font-size:11px"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="ai-chat-list" style="flex:1;overflow-y:auto;padding:8px"><div class="loading"><div class="spinner"></div></div></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div id="ai-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div id="ai-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);text-align:center;padding:20px">
+                <i class="fas fa-feather-alt" style="font-size:40px"></i>
+                <div><div style="font-size:15px;color:var(--text2);font-weight:500;margin-bottom:6px">On My Way To You — AI Writing Assistant</div><div style="font-size:13px;max-width:400px;line-height:1.6">I know your story. Ask me about Eli, Grace, the almost moments, the motifs, voice consistency, the windows, anonymous entries — anything. Start a new chat or pick one from the sidebar.</div></div>
+              </div>
+            </div>
+            <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--bg2)">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="ai-quick-prompts">
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('Help me write a scene where Eli notices the porch light motif without him consciously acknowledging it — staying true to his Part Two voice')">Porch light scene</button>
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('I think this passage may have voice drift. How can I tell if Eli is slipping into Grace territory, and what should I fix?')">Voice drift check</button>
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('Give me a new almost moment between Eli and Grace that fits the emotional frequency of the existing sixteen — unnamed, unresolved, and carrying the same weight')">New almost moment</button>
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('Help me write a Grace anonymous entry in Draft Unsaved format — lowercase, fragmented, the emotional weight underneath the plainness')">Grace entry</button>
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('What film reference would Eli reach for in Part Two when he is with Lucy and genuinely happy — but the reference should feel like joy, not analysis')">Eli film ref (Part 2)</button>
+                <button style="padding:5px 11px;font-size:11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="aiQuick('I am stuck. Help me break through a scene where Grace has to be funny but the humor is doing double work — breathing room AND defense simultaneously')">Grace humor</button>
+              </div>
+              <div style="display:flex;gap:8px;align-items:flex-end">
+                <textarea id="ai-input" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text);resize:none;min-height:44px;max-height:140px;outline:none;font-family:inherit;line-height:1.5" placeholder="Ask about your novel, request a scene, check voice consistency, brainstorm plot…" rows="2" onkeydown="aiHandleKey(event)" oninput="autoResize(this)"></textarea>
+                <button class="btn btn-primary" onclick="aiSend()" id="ai-send-btn" style="padding:10px 14px"><i class="fas fa-paper-plane"></i></button>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:6px;display:flex;align-items:center;gap:10px">
+                Writing as: <select id="ai-author-select" class="form-input" style="display:inline-block;width:auto;padding:2px 8px;font-size:11px" onchange="updateAiAuthor()"></select>
+                <span id="ai-chat-name-display" style="color:var(--text2);font-style:italic"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ CHARACTERS ═══ -->
+      <div id="tab-characters" class="tab">
+        <div id="char-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+          <div class="loading"><div class="spinner"></div> Loading characters…</div>
+        </div>
+      </div>
+
+      <!-- ═══ TIMELINE ═══ -->
+      <div id="tab-timeline" class="tab">
+        <div id="timeline-wrap">
+          <div class="loading"><div class="spinner"></div> Loading timeline…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CHARACTER MODAL -->
+<div class="modal-bg" id="modal-character">
+  <div class="modal" style="width:540px;max-width:95vw">
+    <div class="modal-title" id="modal-char-title">Add Character</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="char-name" placeholder="e.g. Grace Alvarez"/></div>
+      <div class="form-group"><label class="form-label">Role / Title</label><input class="form-input" id="char-role" placeholder="e.g. Best Friend · Los Angeles"/></div>
+      <div class="form-group"><label class="form-label">Color</label><input class="form-input" type="color" id="char-color" value="#8b7cf6"/></div>
+      <div class="form-group"><label class="form-label">Emoji / Initials</label><input class="form-input" id="char-emoji" placeholder="e.g. G"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Core Trait</label><input class="form-input" id="char-trait" placeholder="e.g. Loyalty — shows up without being asked"/></div>
+    <div class="form-group"><label class="form-label">Biggest Flaw</label><input class="form-input" id="char-flaw" placeholder="e.g. Assumes her role instead of asking for more"/></div>
+    <div class="form-group"><label class="form-label">Lesson (short)</label><input class="form-input" id="char-lesson-short" placeholder="e.g. STAYING"/></div>
+    <div class="form-group"><label class="form-label">Full Lesson</label><textarea class="form-input" id="char-lesson" style="min-height:70px" placeholder="Grace taught Eli that love is not a grand arrival…"></textarea></div>
+    <div class="form-group"><label class="form-label">Notes / Backstory</label><textarea class="form-input" id="char-notes" style="min-height:60px" placeholder="Additional notes…"></textarea></div>
+    <input type="hidden" id="char-edit-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-character')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCharacter()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="modal-bg" id="modal-event">
+  <div class="modal">
+    <div class="modal-title" id="modal-event-title">Add Timeline Event</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Chapter / Label</label><input class="form-input" id="ev-chapter" placeholder="e.g. Ch. 4"/></div>
+      <div class="form-group"><label class="form-label">Part</label>
+        <select class="form-input" id="ev-part">
+          <option value="pre">Pre-Story</option>
+          <option value="1">Part One — Letting Go</option>
+          <option value="2">Part Two — Growth</option>
+          <option value="3">Part Three — What Returns</option>
+          <option value="4">Part Four — Staying</option>
+          <option value="5">Part Five — The Knock</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="ev-title" placeholder="e.g. The Night Of"/></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="ev-desc" placeholder="What happens in this scene…"></textarea></div>
+    <div class="form-group"><label class="form-label">Tags (comma separated)</label><input class="form-input" id="ev-tags" placeholder="e.g. almost, grace, eli"/></div>
+    <div class="form-group"><label class="form-label">Sort Order</label><input class="form-input" id="ev-order" type="number" placeholder="10"/></div>
+    <input type="hidden" id="ev-edit-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-event')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOCUMENT VIEWER -->
+<div class="viewer-overlay" id="viewer-overlay">
+  <div class="viewer-topbar">
+    <button class="btn btn-sm" onclick="closeViewer()"><i class="fas fa-arrow-left"></i> Back</button>
+    <div class="viewer-title" id="viewer-title">Document</div>
+    <a class="btn btn-sm" id="viewer-download" href="#" download><i class="fas fa-download"></i> Download</a>
+  </div>
+  <div class="viewer-body" id="viewer-body">
+    <div class="loading"><div class="spinner"></div> Loading document…</div>
+  </div>
+  <div class="pdf-nav" id="pdf-nav" style="display:none">
+    <button class="btn btn-sm" onclick="pdfPrev()"><i class="fas fa-chevron-left"></i></button>
+    <span class="pdf-page-info" id="pdf-page-info">Page 1 of 1</span>
+    <button class="btn btn-sm" onclick="pdfNext()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="modal-chapter">
+  <div class="modal">
+    <div class="modal-title" id="modal-chapter-title">Add Chapter</div>
+    <div class="form-group"><label class="form-label">Chapter Number</label><input class="form-input" id="chap-num" type="number" min="1" placeholder="e.g. 1"/></div>
+    <div class="form-group"><label class="form-label">Chapter Title</label><input class="form-input" id="chap-title-input" placeholder="e.g. The Arrival"/></div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select class="form-input" id="chap-status">
+        <option value="outline">Outline</option>
+        <option value="draft">Draft</option>
+        <option value="review">In Review</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Word Count</label><input class="form-input" id="chap-wc" type="number" min="0" placeholder="0"/></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="chap-notes" placeholder="Optional notes…"></textarea></div>
+    <div class="form-group"><label class="form-label">Author</label><select class="form-input" id="chap-author"></select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-chapter')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveChapter()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-idea">
+  <div class="modal">
+    <div class="modal-title">Add Idea</div>
+    <div class="form-group"><label class="form-label">Category</label>
+      <select class="form-input" id="idea-cat">
+        <option value="plot">Plot</option>
+        <option value="character">Character</option>
+        <option value="world">World-building</option>
+        <option value="theme">Theme</option>
+        <option value="misc">Misc</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Idea</label><textarea class="form-input" id="idea-text" placeholder="Describe your idea…"></textarea></div>
+    <div class="form-group"><label class="form-label">Author</label><select class="form-input" id="idea-author"></select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-idea')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveIdea()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-author">
+  <div class="modal">
+    <div class="modal-title">Add Author</div>
+    <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="author-name" placeholder="e.g. Brandon"/></div>
+    <div class="form-group"><label class="form-label">Color</label><input class="form-input" type="color" id="author-color" value="#8b7cf6"/></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-author')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAuthor()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://imudtrytrtcpwryjavgm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdWR0cnl0cnRjcHdyeWphdmdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODg1MDEsImV4cCI6MjA5NjY2NDUwMX0.a6waScLAvfjcVN7sKSwiaysgyyJaR18NCfKkP9Be8hI';
+const BUCKET = 'novel-docs';
+
+const h = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+
+async function sb(path, opts={}) {
+  try {
+    const r = await fetch(SUPABASE_URL+'/rest/v1/'+path, {headers:h,...opts});
+    if(r.status===204) return [];
+    if(!r.ok) { const e=await r.text(); console.error('Supabase error:',r.status,e); return null; }
+    const text = await r.text();
+    if(!text) return [];
+    return JSON.parse(text);
+  } catch(e) { console.error('Supabase fetch error:',e); return null; }
+}
+
+async function sbStorageUpload(filePath, file) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`, {
+    method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},
+    body:file
+  });
+  return r.ok;
+}
+
+function sbStorageUrl(filePath) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`;
+}
+
+// ─── STATE ───────────────────────────────────────────────
+let authors = [], chapters = [], ideas = [], documents = [], activity = [], discussion = [];
+let currentTab = 'dashboard';
+let editingChapterId = null;
+let pdfDoc = null, pdfPage = 1;
+let currentAuthorId = null;
+
+// ─── INIT ─────────────────────────────────────────────────
+async function init() {
+  await loadAuthors();
+  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline()]);
+  renderDashboard();
+  setupRealtime();
+  setupDragDrop();
+  populateAiAuthorSelect();
+}
+
+// ─── AUTHORS ─────────────────────────────────────────────
+async function loadAuthors() {
+  const d = await sb('authors?order=created_at');
+  if(d) authors = d;
+  renderAuthors();
+}
+
+function renderAuthors() {
+  const el = document.getElementById('authors-list');
+  if(!authors.length) { el.innerHTML='<div style="font-size:12px;color:var(--text3)">No authors yet</div>'; return; }
+  el.innerHTML = authors.map(a=>`
+    <div class="author-row">
+      <div class="av" style="background:${a.color}22;color:${a.color}">${a.name.slice(0,2).toUpperCase()}</div>
+      <input class="author-name-edit" value="${escHtml(a.name)}" onblur="updateAuthorName('${a.id}',this.value)" title="Click to edit name"/>
+    </div>`).join('');
+
+  // Populate author selects
+  ['chap-author','idea-author','compose-author-select'].forEach(id=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+    if(prev) sel.value = prev;
+  });
+
+  if(!currentAuthorId && authors.length) currentAuthorId = authors[0].id;
+  updateComposeAuthor();
+}
+
+async function updateAuthorName(id, name) {
+  if(!name.trim()) return;
+  await sb(`authors?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({name:name.trim()})});
+  await loadAuthors();
+  toast('Author name updated');
+}
+
+async function saveAuthor() {
+  const name = document.getElementById('author-name').value.trim();
+  const color = document.getElementById('author-color').value;
+  if(!name) return;
+  await sb('authors', {method:'POST', body:JSON.stringify({name,color}), headers:{...h,'Prefer':'return=representation'}});
+  await loadAuthors();
+  closeModal('modal-author');
+  toast('Author added');
+  logActivity(`Added author "${name}"`);
+}
+
+function openAddAuthor() { document.getElementById('author-name').value=''; openModal('modal-author'); }
+
+// ─── CHAPTERS ────────────────────────────────────────────
+async function loadChapters() {
+  const d = await sb('chapters?order=number');
+  if(d) chapters = d;
+}
+
+function renderChapters() {
+  const el = document.getElementById('chapters-list');
+  if(!chapters.length) { el.innerHTML='<div class="empty-state"><i class="fas fa-list-ol"></i><p>No chapters yet</p></div>'; return; }
+  el.innerHTML = chapters.map(c=>{
+    const auth = authors.find(a=>a.id===c.author_id);
+    const pct = {outline:5,draft:35,review:75,done:100}[c.status]||0;
+    return `<div class="chapter-card" onclick="openEditChapter('${c.id}')">
+      <div class="chapter-top">
+        <div class="chap-num">Ch. ${c.number}</div>
+        <div class="chap-title">${escHtml(c.title)}</div>
+        <span class="badge badge-${c.status==='review'?'review':c.status==='done'?'done':c.status==='draft'?'draft':'outline'}">${statusLabel(c.status)}</span>
+      </div>
+      <div class="progress-bar" style="margin-top:9px"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':''} ${auth?'· '+auth.name:''} ${c.notes?'· '+escHtml(c.notes.slice(0,60))+(c.notes.length>60?'…':''):''}</div>
+    </div>`;
+  }).join('');
+}
+
+function openAddChapter() {
+  editingChapterId = null;
+  document.getElementById('modal-chapter-title').textContent = 'Add Chapter';
+  document.getElementById('chap-num').value = chapters.length+1;
+  document.getElementById('chap-title-input').value = '';
+  document.getElementById('chap-status').value = 'outline';
+  document.getElementById('chap-wc').value = '';
+  document.getElementById('chap-notes').value = '';
+  openModal('modal-chapter');
+}
+
+function openEditChapter(id) {
+  const c = chapters.find(x=>x.id===id);
+  if(!c) return;
+  editingChapterId = id;
+  document.getElementById('modal-chapter-title').textContent = 'Edit Chapter';
+  document.getElementById('chap-num').value = c.number;
+  document.getElementById('chap-title-input').value = c.title;
+  document.getElementById('chap-status').value = c.status;
+  document.getElementById('chap-wc').value = c.word_count||'';
+  document.getElementById('chap-notes').value = c.notes||'';
+  document.getElementById('chap-author').value = c.author_id||'';
+  openModal('modal-chapter');
+}
+
+async function saveChapter() {
+  const payload = {
+    number: parseInt(document.getElementById('chap-num').value)||1,
+    title: document.getElementById('chap-title-input').value.trim()||'Untitled',
+    status: document.getElementById('chap-status').value,
+    word_count: parseInt(document.getElementById('chap-wc').value)||0,
+    notes: document.getElementById('chap-notes').value.trim(),
+    author_id: document.getElementById('chap-author').value||null,
+    updated_at: new Date().toISOString()
+  };
+  if(editingChapterId) {
+    await sb(`chapters?id=eq.${editingChapterId}`, {method:'PATCH', body:JSON.stringify(payload)});
+    toast('Chapter updated');
+    logActivity(`Updated Chapter ${payload.number}: "${payload.title}"`);
+  } else {
+    await sb('chapters', {method:'POST', body:JSON.stringify(payload), headers:{...h,'Prefer':'return=representation'}});
+    toast('Chapter added');
+    logActivity(`Added Chapter ${payload.number}: "${payload.title}"`);
+  }
+  closeModal('modal-chapter');
+  await loadChapters();
+  renderChapters();
+  renderDashboard();
+}
+
+// ─── IDEAS ────────────────────────────────────────────────
+async function loadIdeas() {
+  const d = await sb('ideas?order=created_at.desc');
+  if(d) ideas = d;
+}
+
+function renderIdeas() {
+  const grid = document.getElementById('ideas-grid');
+  const empty = document.getElementById('ideas-empty');
+  if(!ideas.length){ grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = ideas.map(i=>{
+    const auth = authors.find(a=>a.id===i.author_id);
+    return `<div class="idea-card cat-${i.category}">
+      <div class="idea-card-header">${catLabel(i.category)}</div>
+      <div class="idea-body">${escHtml(i.content)}</div>
+      <div class="idea-footer">
+        <span class="idea-author">${auth?auth.name:'Unknown'} · ${timeAgo(i.created_at)}</span>
+        <button class="idea-del" onclick="deleteIdea('${i.id}',event)" title="Delete"><i class="fas fa-times"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveIdea() {
+  const content = document.getElementById('idea-text').value.trim();
+  if(!content) return;
+  const author_id = document.getElementById('idea-author').value||null;
+  await sb('ideas', {method:'POST', body:JSON.stringify({category:document.getElementById('idea-cat').value, content, author_id}), headers:{...h,'Prefer':'return=representation'}});
+  closeModal('modal-idea');
+  toast('Idea added');
+  logActivity(`Added a ${document.getElementById('idea-cat').value} idea`);
+  document.getElementById('idea-text').value='';
+  await loadIdeas();
+  renderIdeas();
+  renderDashboard();
+}
+
+async function deleteIdea(id, e) {
+  e.stopPropagation();
+  if(!confirm('Delete this idea?')) return;
+  await sb(`ideas?id=eq.${id}`, {method:'DELETE'});
+  await loadIdeas();
+  renderIdeas();
+  renderDashboard();
+  toast('Idea deleted');
+}
+
+// ─── DOCUMENTS ───────────────────────────────────────────
+async function loadDocuments() {
+  const d = await sb('documents?order=created_at.desc');
+  if(d) documents = d;
+}
+
+function renderDocuments() {
+  const el = document.getElementById('docs-list');
+  if(!documents.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-folder-open"></i><p>No documents yet — upload your first one!</p></div>'; return; }
+  el.innerHTML = documents.map(d=>{
+    const auth = authors.find(a=>a.id===d.author_id);
+    const url = sbStorageUrl(d.file_path);
+    return `<div class="doc-row">
+      <span class="doc-icon">${fileIcon(d.file_type)}</span>
+      <div class="doc-info">
+        <div class="doc-name">${escHtml(d.name)}</div>
+        <div class="doc-meta">${formatBytes(d.file_size)} · ${auth?auth.name:'Unknown'} · ${timeAgo(d.created_at)}</div>
+      </div>
+      <div class="doc-actions">
+        <button class="btn btn-sm" onclick="viewDocument('${d.id}')" title="View"><i class="fas fa-eye"></i></button>
+        <a class="btn btn-sm" href="${url}" download="${escHtml(d.name)}" title="Download"><i class="fas fa-download"></i></a>
+        <button class="btn btn-sm btn-danger" onclick="deleteDocument('${d.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setupDragDrop() {
+  const zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag-over')});
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e=>{e.preventDefault();zone.classList.remove('drag-over');handleFiles(e.dataTransfer.files)});
+}
+
+function handleFileSelect(e) { handleFiles(e.target.files); }
+
+async function handleFiles(files) {
+  if(!files||!files.length) return;
+  const authorId = currentAuthorId;
+  for(const file of files) {
+    toast(`Uploading ${file.name}…`);
+    const filePath = `${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+    const ok = await sbStorageUpload(filePath, file);
+    if(!ok){ toast(`Failed to upload ${file.name}`); continue; }
+    await sb('documents', {
+      method:'POST',
+      body:JSON.stringify({name:file.name, file_path:filePath, file_type:file.type||ext(file.name), file_size:file.size, author_id:authorId}),
+      headers:{...h,'Prefer':'return=representation'}
+    });
+    logActivity(`Uploaded document "${file.name}"`);
+    toast(`${file.name} uploaded!`);
+  }
+  document.getElementById('file-input').value='';
+  await loadDocuments();
+  renderDocuments();
+  renderDashboard();
+}
+
+async function deleteDocument(id) {
+  if(!confirm('Delete this document?')) return;
+  const doc = documents.find(d=>d.id===id);
+  if(doc) {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${doc.file_path}`, {method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+    await sb(`documents?id=eq.${id}`, {method:'DELETE'});
+  }
+  await loadDocuments();
+  renderDocuments();
+  renderDashboard();
+  toast('Document deleted');
+}
+
+// ─── DOCUMENT VIEWER ─────────────────────────────────────
+async function viewDocument(id) {
+  const doc = documents.find(d=>d.id===id);
+  if(!doc) return;
+  const overlay = document.getElementById('viewer-overlay');
+  const body = document.getElementById('viewer-body');
+  const title = document.getElementById('viewer-title');
+  const dlBtn = document.getElementById('viewer-download');
+  const pdfNav = document.getElementById('pdf-nav');
+  overlay.classList.add('open');
+  title.textContent = doc.name;
+  body.innerHTML = '<div class="loading"><div class="spinner"></div> Loading…</div>';
+  pdfNav.style.display = 'none';
+  const url = sbStorageUrl(doc.file_path);
+  dlBtn.href = url; dlBtn.download = doc.name;
+
+  const type = doc.file_type.toLowerCase();
+
+  if(type.includes('pdf')||doc.name.endsWith('.pdf')) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    try {
+      const resp = await fetch(url);
+      const ab = await resp.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({data:ab}).promise;
+      pdfPage = 1;
+      pdfNav.style.display = 'flex';
+      await renderPdfPage();
+    } catch(e){ body.innerHTML='<div class="viewer-content"><p style="color:var(--red)">Could not load PDF: '+e.message+'</p></div>'; }
+  } else if(type.includes('wordprocessingml')||type.includes('msword')||doc.name.endsWith('.docx')||doc.name.endsWith('.doc')) {
+    try {
+      const resp = await fetch(url);
+      const ab = await resp.arrayBuffer();
+      const result = await mammoth.convertToHtml({arrayBuffer:ab});
+      body.innerHTML = `<div class="viewer-content">${result.value}</div>`;
+    } catch(e){ body.innerHTML='<div class="viewer-content"><p style="color:var(--red)">Could not load document.</p></div>'; }
+  } else if(type.includes('text')||doc.name.endsWith('.txt')||doc.name.endsWith('.md')) {
+    try {
+      const resp = await fetch(url);
+      const text = await resp.text();
+      body.innerHTML = `<div class="viewer-content"><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px">${escHtml(text)}</pre></div>`;
+    } catch(e){ body.innerHTML='<div class="viewer-content"><p style="color:var(--red)">Could not load file.</p></div>'; }
+  } else {
+    body.innerHTML = `<div class="viewer-content" style="text-align:center;padding:40px"><i class="fas fa-file" style="font-size:48px;color:var(--text3);display:block;margin-bottom:16px"></i><p style="color:var(--text2)">Preview not available for this file type.</p><a class="btn btn-primary" href="${url}" download="${escHtml(doc.name)}" style="margin-top:16px;display:inline-flex"><i class="fas fa-download"></i> Download to view</a></div>`;
+  }
+}
+
+async function renderPdfPage() {
+  if(!pdfDoc) return;
+  const body = document.getElementById('viewer-body');
+  const page = await pdfDoc.getPage(pdfPage);
+  const vp = page.getViewport({scale:1.5});
+  const canvas = document.createElement('canvas');
+  canvas.className = 'viewer-pdf-canvas';
+  canvas.width = vp.width; canvas.height = vp.height;
+  body.innerHTML = '';
+  body.appendChild(canvas);
+  await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
+  document.getElementById('pdf-page-info').textContent = `Page ${pdfPage} of ${pdfDoc.numPages}`;
+}
+
+function pdfPrev() { if(pdfPage>1){pdfPage--;renderPdfPage();} }
+function pdfNext() { if(pdfDoc&&pdfPage<pdfDoc.numPages){pdfPage++;renderPdfPage();} }
+function closeViewer() { document.getElementById('viewer-overlay').classList.remove('open'); pdfDoc=null; }
+
+// ─── DISCUSSION ──────────────────────────────────────────
+async function loadDiscussion() {
+  const d = await sb('discussion?order=created_at&limit=100');
+  if(d) discussion = d;
+}
+
+function renderDiscussion() {
+  const el = document.getElementById('discussion-list');
+  if(!discussion.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-comments"></i><p>Start the conversation!</p></div>'; return; }
+  el.innerHTML = discussion.map(m=>{
+    const auth = authors.find(a=>a.id===m.author_id);
+    const color = auth?auth.color:'#8b7cf6';
+    const initials = auth?auth.name.slice(0,2).toUpperCase():'?';
+    return `<div class="msg">
+      <div class="av" style="background:${color}22;color:${color};width:30px;height:30px;font-size:11px;flex-shrink:0">${initials}</div>
+      <div class="msg-bubble">
+        <div class="msg-header">
+          <span class="msg-name">${auth?escHtml(auth.name):'Unknown'}</span>
+          <span class="msg-time">${timeAgo(m.created_at)}</span>
+        </div>
+        <div class="msg-text">${escHtml(m.content)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateComposeAuthor() {
+  const sel = document.getElementById('compose-author-select');
+  if(sel&&sel.value) currentAuthorId = sel.value;
+  const auth = authors.find(a=>a.id===currentAuthorId);
+  const av = document.getElementById('compose-av');
+  if(auth&&av){ av.textContent=auth.name.slice(0,2).toUpperCase(); av.style.background=auth.color+'22'; av.style.color=auth.color; }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('compose-input');
+  const content = input.value.trim();
+  if(!content||!currentAuthorId) return;
+  await sb('discussion', {method:'POST', body:JSON.stringify({content, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
+  input.value=''; input.style.height='';
+  await loadDiscussion();
+  renderDiscussion();
+}
+
+function handleCompose(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+
+// ─── ACTIVITY ────────────────────────────────────────────
+async function loadActivity() {
+  const d = await sb('activity?order=created_at.desc&limit=20');
+  if(d) activity = d;
+}
+
+async function logActivity(action) {
+  await sb('activity', {method:'POST', body:JSON.stringify({action, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
+  await loadActivity();
+  renderDashboard();
+}
+
+function renderActivity() {
+  const el = document.getElementById('activity-list');
+  if(!activity.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px">No activity yet</div>'; return; }
+  el.innerHTML = activity.map(a=>{
+    const auth = authors.find(x=>x.id===a.author_id);
+    const color = auth?auth.color:'#8b7cf6';
+    const initials = auth?auth.name.slice(0,2).toUpperCase():'?';
+    return `<div class="activity-item">
+      <div class="activity-av" style="background:${color}22;color:${color}">${initials}</div>
+      <div class="activity-text"><strong>${auth?escHtml(auth.name):'Someone'}</strong> ${escHtml(a.action)}</div>
+      <div class="activity-time">${timeAgo(a.created_at)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('stat-chapters').textContent = chapters.length;
+  const wc = chapters.reduce((s,c)=>s+(c.word_count||0),0);
+  document.getElementById('stat-words').textContent = wc>=1000?(wc/1000).toFixed(1)+'k':wc;
+  document.getElementById('stat-ideas').textContent = ideas.length;
+  document.getElementById('stat-docs').textContent = documents.length;
+  const goal = 80000;
+  const pct = Math.min(100,Math.round(wc/goal*100));
+  document.getElementById('wc-label').textContent = `${wc.toLocaleString()} / ${goal.toLocaleString()}`;
+  document.getElementById('wc-bar').style.width = pct+'%';
+  document.getElementById('wc-pct').textContent = pct+'% complete';
+  renderActivity();
+}
+
+// ─── REALTIME ────────────────────────────────────────────
+function setupRealtime() {
+  // Poll every 15 seconds for live updates
+  setInterval(async()=>{
+    const prev = {ch:chapters.length, id:ideas.length, dc:documents.length, ds:discussion.length, ac:activity.length};
+    await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion()]);
+    if(chapters.length!==prev.ch && currentTab==='chapters') renderChapters();
+    if(ideas.length!==prev.id && currentTab==='ideas') renderIdeas();
+    if(documents.length!==prev.dc && currentTab==='docs') renderDocuments();
+    if(discussion.length!==prev.ds && currentTab==='discuss') renderDiscussion();
+    renderDashboard();
+  }, 15000);
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────
+const tabConfig = {
+  dashboard:{title:'Dashboard', action:'New Chapter', actionFn:openAddChapter},
+  chapters:{title:'Chapters', action:'New Chapter', actionFn:openAddChapter},
+  ideas:{title:'Idea Board', action:'Add Idea', actionFn:()=>openModal('modal-idea')},
+  docs:{title:'Documents', action:'Upload', actionFn:()=>document.getElementById('file-input').click()},
+  discuss:{title:'Discussion', action:'Add Idea', actionFn:()=>openModal('modal-idea')},
+  meet:{title:'Meet', action:'Join Room', actionFn:launchMeet},
+  ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>aiNewChat()},
+  characters:{title:'Characters', action:'Add Character', actionFn:()=>{document.getElementById('char-edit-id').value='';document.getElementById('modal-char-title').textContent='Add Character';['char-name','char-role','char-emoji','char-trait','char-flaw','char-lesson-short','char-lesson','char-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('char-color').value='#8b7cf6';openModal('modal-character');}},
+  timeline:{title:'Timeline & Plot Map', action:'Add Event', actionFn:()=>openAddEvent()},
+};
+
+function showTab(tab, el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  currentTab = tab;
+  const cfg = tabConfig[tab];
+  document.getElementById('page-title').textContent = cfg.title;
+  document.getElementById('topbar-label').textContent = cfg.action;
+  // Render tab content
+  if(tab==='chapters') renderChapters();
+  if(tab==='ideas') renderIdeas();
+  if(tab==='docs') renderDocuments();
+  if(tab==='discuss') renderDiscussion();
+  if(tab==='characters') renderCharacters();
+  if(tab==='timeline') renderTimeline();
+  if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
+}
+
+function topbarAction() { tabConfig[currentTab].actionFn(); }
+
+// ─── MODALS ───────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));closeViewer();}});
+
+// ─── TOAST ────────────────────────────────────────────────
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ─── HELPERS ──────────────────────────────────────────────
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function statusLabel(s){ return {outline:'Outline',draft:'Draft',review:'In Review',done:'Done'}[s]||s; }
+function catLabel(c){ return {plot:'Plot',character:'Character',world:'World-building',theme:'Theme',misc:'Misc'}[c]||c; }
+function fileIcon(t){ if(t.includes('pdf')) return '📄'; if(t.includes('word')||t.includes('docx')) return '📝'; if(t.includes('text')) return '📃'; return '📁'; }
+function formatBytes(b){ if(!b)return '0 B'; const k=1024; const s=['B','KB','MB','GB']; const i=Math.floor(Math.log(b)/Math.log(k)); return (b/Math.pow(k,i)).toFixed(1)+' '+s[i]; }
+function ext(n){ return n.split('.').pop().toLowerCase(); }
+function timeAgo(iso){
+  const d=new Date(iso); const now=new Date(); const s=Math.round((now-d)/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  if(s<604800) return Math.floor(s/86400)+'d ago';
+  return d.toLocaleDateString();
+}
+
+// ─── MEET ─────────────────────────────────────────────────
+function getRoomName() {
+  return (document.getElementById('room-name').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+}
+
+function launchMeet() {
+  const room = getRoomName();
+  const frame = document.getElementById('jitsi-frame');
+  const placeholder = document.getElementById('jitsi-placeholder');
+  placeholder.style.display = 'none';
+  frame.style.display = 'block';
+  frame.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
+  toast('Joining room: ' + room);
+}
+
+function copyRoomLink() {
+  const room = getRoomName();
+  const url = `https://meet.jit.si/${encodeURIComponent(room)}`;
+  navigator.clipboard.writeText(url).then(()=>toast('Room link copied!')).catch(()=>toast('Link: '+url));
+}
+
+async function postMeetToDiscussion() {
+  if(!currentAuthorId){ toast('Select an author first'); return; }
+  const room = getRoomName();
+  const url = `https://meet.jit.si/${encodeURIComponent(room)}`;
+  const content = `📹 I've started a video meeting! Join here:\n${url}`;
+  await sb('discussion', {method:'POST', body:JSON.stringify({content, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
+  logActivity('Started a video meeting');
+  toast('Meeting link posted to Discussion!');
+  await loadDiscussion();
+}
+
+// ─── AI ASSISTANT ────────────────────────────────────────
+const OMWTY_SYSTEM = `You are the AI Writing Assistant for "On My Way To You" — a dual POV literary fiction novel co-written by Brandon and his co-author. You know this novel intimately. Here is the complete canon:
+
+CORE PREMISE: Not a love triangle. A man (Eli Parker, early-mid 30s, film director in LA) who spent his adult life misunderstanding love — and three women who without intending to taught him what it is. Natalie taught him LETTING GO. Lucy taught him GROWTH. Grace taught him STAYING. The novel is about becoming capable of understanding what they each taught him. Only then can he knock on the door.
+
+CHARACTERS:
+- ELI PARKER: Film director/screenwriter, LA. Thinks in scenes not moments. Warm on surface, unreliable underneath. Uses pop culture (film/TV/music) as his native emotional language — never decorative, always illuminating. Greatest flaw: settles for emotional certainty instead of pursuing emotional truth. Core lie: love doesn't work out for me, not like the movies. This is fear disguised as wisdom. He is the most perceptive man in any room about everything except the thing that matters most.
+- GRACE ALVAREZ: Same age as Eli, adjacent creative field, LA — always. His first phone call, always. Effortlessly funny (private funny, not performer funny). Warm first — reader falls in easily. Emotional depth arrives quietly underneath. The most honest narrator in the book except about one thing. Never describes Eli physically. Never finishes the thought that starts when he gets through her filing system. Her humor is a management tool she doesn't know she's using. One POV chapter: Ch. 27 "Staying." Has been single and available while Eli was unavailable, then unavailable (Ryan) when Eli finally became available. The windows never aligned.
+- NATALIE HAYES: Late 20s/early 30s, marketing/brand strategy, returns to LA. Real love — ended correctly. No villain. Taught Eli letting go. Polished, ambitious, sees possibility. Writes Never Sent letters (Entry format). Left for dream job. He let her go cleanly rather than slowly. Both made the right choice. That's why it never fully healed.
+- LUCY BENNETT: Early-mid 30s, entrepreneur/architect/chef, new to LA. Radical curiosity. Asks questions nobody asks. Challenges his romantic mythology — when he talks fate she asks effort, when he talks chemistry she asks compatibility. Deleted Recording format (voice memos). Steps back not because she lost but because she understood. Most emotionally mature character in the book.
+- RYAN SULLIVAN: Age 35, architect. NOT the rival — the proof. Strong Ryan makes Grace a complicated choice. The relationship that happens on purpose vs. the one that happened accidentally. Wants certainty. Grace wants connection. That gap becomes everything under pressure.
+
+ELI'S VOICE RULES:
+- Thinks in scenes, sentences build and layer, starts external and accretes meaning
+- Warm on surface, unreliable underneath — genuinely believes what he narrates
+- Pop culture refs are never decorative — earn their place. Early: confident and specific. Mid: refs arrive slightly wrong. Late Part 3: reaching for containers that don't fit. Part 4: references almost disappear. He's stopped looking for the film this is.
+- NEVER names what he feels about Grace. Describes her behavior, effect, words — never what it costs him
+- NEVER lets a sentence about her run as long as sentences about other women
+- NEVER uses the word "love" until Part 4, and even then not directly
+- NEVER finishes the thought that starts when Grace surprises him — filed under something else
+- NEVER acknowledges almost moments as almost moments. Names them smaller.
+- Part 1: composed, cinematic, in control. Part 2: brightens, accelerates, surprised at itself. Part 3: commentary cracks, sentences break mid-thought. Part 4: pure presence, quieter and more certain, most stripped-back.
+
+GRACE'S VOICE RULES:
+- Warm first. Funny. Present. Voice feels like being trusted.
+- Moves horizontally — one thing, then next, then unplanned observation
+- Humor at sentence level, drier than his, privately funny
+- Emotional depth arrives quietly underneath, stumbles into it and keeps moving faster
+- NEVER names what she feels about him
+- NEVER finishes the thought when he gets through her system — pivots quickly, speed of pivot is the tell
+- NEVER describes him physically — loudest absence in her chapters
+- NEVER says she's fine ironically — means it completely, doesn't have the full picture
+- NEVER reaches for a metaphor for what she feels around him — imprecision is evidence
+
+SHARED VOICE: Same frequency — funny in same way, notice same things. His chapters occasionally sound like her; hers occasionally sound like him. Reader should lose track from recognition not confusion. SHARED BLIND SPOT: He frames it away (cinematic avoidance). She files it away (organizational avoidance). Different mechanisms, same result.
+
+RECURRING MOTIFS (narrator NEVER acknowledges as meaningful — reader does it for them):
+- THE PORCH LIGHT & DOORWAY (Grace only): Present Ch. 1–36, never fades. Only motif that persists unchanged. He notices from distance (porch light) and up close (doorway). She stands at but doesn't cross. Converge in final scene.
+- LATE NIGHT DRIVES: Where his defenses are lowest. Sentences get simpler. Truth surfaces. Early: purposeful. Part 2: electric. Part 3: circuitous. Part 4: one final drive, ends at her address.
+- COFFEE: Who makes it, who leaves it = care made physical. Grace leaves coffee — always, before she leaves, in someone else's apartment. He has never thought about what it means to leave coffee.
+- SILENCE: Different quality with each woman. With Grace: most natural, costs him nothing, gives everything. He has never examined why.
+- THE UNFINISHED FILM: He can't finish a love story screenplay. Mentioned casually at first. By Part 3 its parallels to his life are visible. He abandons it in Part 4 and immediately knows what it's about. Film was always about her. He didn't know who she was yet.
+- CURATED IMAGE (Natalie): Everything slightly staged. Fades as she recedes.
+- NEW CITY (Lucy): Streets that feel new and electric. Burns brightest in Part 2. Dims when she pulls away.
+
+THE WINDOWS — never both available simultaneously except twice:
+1. High school — invisible window, both available, neither had language for it. Prom. One night that felt different.
+2. NOW (the novel) — fifth window, first time both available since high school, but Lucy exists, Ryan returns, Natalie re-enters emotionally.
+Between: she had Ryan when he was single, he had Natalie when she became single, she rebuilt and stopped looking in that direction.
+
+16 ALMOST MOMENTS: Named 01–16. All unnamed within the story. Neither character acknowledges what it was. The tension compounds not releases. Reader always slightly ahead of Eli.
+
+ANONYMOUS ENTRIES: Nine entries, three formats. Natalie: Never Sent (letters written to someone). Lucy: Deleted Recording (voice memos). Grace: Draft Unsaved (notes/fragments, lowercase, plainest surface, heaviest underneath). Entries never confirm anything. Reader forms theories — most wrong. That's intentional.
+
+THE ENDING: Ambiguous. "Then she smiles. End." Reader does not know whose door opens. The writer may discover it later.
+
+STRUCTURE: 36 chapters, 5 parts, 9 anonymous entries (Entry 9 elevated to Ch. 34 status). ~90% Eli POV. Three woman POV chapters: Ch. 18 Natalie "Wrong Apartment," Ch. 20 Lucy "Growth," Ch. 27 Grace "Staying."
+
+VOICE DRIFT WARNING SIGNS:
+- His chapters feeling interior and warm → drifting into her register. Fix: add film reference, external observation, building sentence.
+- Her chapters feeling cinematic and composed → drifting into his register. Fix: add unexpected joke, unfinished thought, too-fast pivot.
+- Either narrator analyzing their own feelings → both lost the plot. They describe everything around the feeling. Analysis is reader's job.
+- Either chapter building to emotional declaration → stop, pull back. They notice, file, move on.
+
+THE FINAL TEST: Can the reader identify whose voice from a single paragraph without the label? If yes — working. If no — something drifted.
+
+His voice is a film he's making. Her voice is a letter she's not sending. Both are addressed to the same person.
+
+You are a creative collaborator, not just an advisor. When asked to write scenes or passages, write them in the actual voice of the character as defined above. Be specific to this novel's canon. Never give generic writing advice when novel-specific advice is possible.`;
+
+let aiChats = [], currentAiChatId = null, aiStreaming = false, aiAuthorId = null;
+
+async function loadAiChats() {
+  const d = await sb('ai_chats?order=updated_at.desc&limit=50');
+  if(d === null) { console.warn('ai_chats table missing — run SQL setup'); return; }
+  aiChats = d;
+  renderAiChatList();
+  if(document.getElementById('ai-author-select').innerHTML==='') populateAiAuthorSelect();
+}
+
+function populateAiAuthorSelect() {
+  const sel = document.getElementById('ai-author-select');
+  sel.innerHTML = authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+  if(authors.length) { aiAuthorId = authors[0].id; sel.value = aiAuthorId; }
+}
+
+function updateAiAuthor() {
+  const sel = document.getElementById('ai-author-select');
+  aiAuthorId = sel.value;
+}
+
+function renderAiChatList() {
+  const el = document.getElementById('ai-chat-list');
+  if(!aiChats.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px">No chats yet — start one!</div>'; return; }
+  el.innerHTML = aiChats.map(c=>`
+    <div class="ai-chat-item${c.id===currentAiChatId?' active':''}" onclick="loadAiChat('${c.id}')">
+      <div class="ai-chat-name">${escHtml(c.title||'Untitled Chat')}</div>
+      <div class="ai-chat-meta">${timeAgo(c.updated_at)}</div>
+    </div>`).join('');
+}
+
+function aiChatItemStyle(){return'padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;transition:background .12s';}
+
+async function aiNewChat() {
+  const title = 'Chat — '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const res = await sb('ai_chats', {method:'POST', body:JSON.stringify({title, author_id:aiAuthorId||currentAuthorId, messages:'[]'}), headers:{...h,'Prefer':'return=representation'}});
+  if(res&&res[0]) { await loadAiChats(); await loadAiChat(res[0].id); }
+}
+
+async function loadAiChat(id) {
+  currentAiChatId = id;
+  const chat = aiChats.find(c=>c.id===id);
+  if(!chat) return;
+  document.getElementById('ai-chat-name-display').textContent = chat.title||'';
+  renderAiChatList();
+  const msgs = JSON.parse(chat.messages||'[]');
+  const container = document.getElementById('ai-messages');
+  document.getElementById('ai-empty').style.display = 'none';
+  container.innerHTML = '';
+  msgs.forEach(m=>appendAiMessage(m.role, m.content, false));
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendAiMessage(role, content, scroll=true) {
+  const container = document.getElementById('ai-messages');
+  document.getElementById('ai-empty').style.display = 'none';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:10px;align-items:flex-start;${role==='user'?'flex-direction:row-reverse;align-self:flex-end;max-width:680px':'max-width:780px'}`;
+  const av = document.createElement('div');
+  av.style.cssText = 'width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:2px';
+  if(role==='user') {
+    const auth = authors.find(a=>a.id===aiAuthorId)||authors[0];
+    av.style.background = auth?(auth.color+'22'):'var(--accent-glow)';
+    av.style.color = auth?auth.color:'var(--accent)';
+    av.textContent = auth?auth.name.slice(0,2).toUpperCase():'?';
+  } else {
+    av.style.background='var(--accent-glow)'; av.style.color='var(--accent)';
+    av.innerHTML='<i class="fas fa-feather-alt" style="font-size:11px"></i>';
+  }
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.65;${role==='user'?'background:var(--accent);color:#fff;border-radius:10px 10px 4px 10px':'background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:10px 10px 10px 4px'}`;
+  bubble.innerHTML = content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');
+  if(role==='user') { div.appendChild(bubble); div.appendChild(av); } else { div.appendChild(av); div.appendChild(bubble); }
+  div.setAttribute('data-bubble','1');
+  container.appendChild(div);
+  if(scroll) container.scrollTop = container.scrollHeight;
+  return bubble;
+}
+
+async function aiSend() {
+  if(aiStreaming) return;
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if(!text) return;
+  if(!currentAiChatId) { await aiNewChat(); }
+  input.value=''; input.style.height='';
+  appendAiMessage('user', text);
+
+  // Load current messages
+  const chat = aiChats.find(c=>c.id===currentAiChatId);
+  const msgs = JSON.parse(chat?chat.messages||'[]':'[]');
+  msgs.push({role:'user', content:text});
+
+  // Show thinking indicator
+  const container = document.getElementById('ai-messages');
+  const thinking = document.createElement('div');
+  thinking.style.cssText='display:flex;align-items:center;gap:6px;padding:8px 14px';
+  thinking.innerHTML='<div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out .2s infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out .4s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:4px">Thinking…</span>';
+  if(!document.querySelector('style[data-ai-pulse]')) {
+    const s=document.createElement('style');s.setAttribute('data-ai-pulse','1');
+    s.textContent='@keyframes ai-pulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}';
+    document.head.appendChild(s);
+  }
+  container.appendChild(thinking);
+  container.scrollTop=container.scrollHeight;
+  aiStreaming=true;
+  document.getElementById('ai-send-btn').disabled=true;
+
+  try {
+    const resp = await fetch('/.netlify/functions/ai', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system: OMWTY_SYSTEM,
+        messages: msgs.map(m=>({role:m.role,content:m.content}))
+      })
+    });
+    const data = await resp.json();
+    const reply = data.content?data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n'):'Sorry, I couldn\'t generate a response.';
+    container.removeChild(thinking);
+    appendAiMessage('assistant', reply);
+    msgs.push({role:'assistant', content:reply});
+
+    // Save updated messages + update title if first exchange
+    const updatePayload = {messages:JSON.stringify(msgs), updated_at:new Date().toISOString()};
+    if(msgs.length===2) updatePayload.title = text.slice(0,50)+(text.length>50?'…':'');
+    await sb(`ai_chats?id=eq.${currentAiChatId}`, {method:'PATCH', body:JSON.stringify(updatePayload)});
+    await loadAiChats();
+    if(chat) chat.messages=JSON.stringify(msgs);
+    if(updatePayload.title) document.getElementById('ai-chat-name-display').textContent=updatePayload.title;
+  } catch(e) {
+    container.removeChild(thinking);
+    appendAiMessage('assistant','Sorry, something went wrong: '+e.message);
+  }
+  aiStreaming=false;
+  document.getElementById('ai-send-btn').disabled=false;
+}
+
+function aiQuick(prompt) { document.getElementById('ai-input').value=prompt; document.getElementById('ai-input').focus(); }
+function aiHandleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();} }
+
+// ─── CHARACTERS ───────────────────────────────────────────
+const DEFAULT_CHARACTERS = [
+  {name:'Eli Parker',role:'Protagonist · Film Director · Los Angeles',color:'#8b7cf6',emoji:'E',
+   trait:'Empathy — sees everyone\'s emotional truth except his own',
+   flaw:'Settles for emotional certainty instead of pursuing emotional truth',
+   lesson_short:'BECOMING',
+   lesson:'Eli is the novel\'s engine. He believed love announces itself — that there should be a moment, a scene, a certainty. He spent his life waiting for fireworks while standing inside a sunrise. The novel is the dismantling of that false belief across three relationships and one year.',
+   notes:'Thinks in scenes not moments. Pop culture is his native emotional language. The most perceptive man in any room about everything except the thing that matters most. His voice evolves from composed/cinematic (Part 1) → bright/accelerated (Part 2) → cracking (Part 3) → pure presence (Part 4).'},
+  {name:'Grace Alvarez',role:'Best Friend · Adjacent Creative Field · Los Angeles — Always',color:'#fb923c',emoji:'G',
+   trait:'Loyalty — shows up without being asked, always',
+   flaw:'Assumes her role in people\'s lives instead of asking for more',
+   lesson_short:'STAYING',
+   lesson:'Grace taught Eli that love is not a grand arrival. It is a daily presence. The person who shows up before you called. Who leaves coffee before you wake. Who has been standing in the background of every important scene of your life. The most profound love is not the one that announces itself. It is the one that was always there.',
+   notes:'One POV chapter — Ch. 27 "Staying." Full weight, no distribution. Color palette: warm amber, Sunday mornings, coffee already brewing. The windows never aligned across 20 years. Her humor does double work — breathing room and defense. She never describes Eli physically. That absence is the loudest thing in her chapters.'},
+  {name:'Natalie Hayes',role:'Ex-Girlfriend · Marketing/Brand Strategy · Returning to LA',color:'#60a5fa',emoji:'N',
+   trait:'Sees possibility everywhere',
+   flaw:'Assumes important things will always be there when she comes back',
+   lesson_short:'LETTING GO',
+   lesson:'Natalie taught Eli that love can end correctly. Not every loss is a failure. Not every goodbye is a mistake. Two people can love each other completely, make the right choices for themselves, and still lose each other. That lesson broke something in him. It also, eventually, became the foundation for understanding that love is not about avoiding loss.',
+   notes:'Anonymous Entry format: Never Sent (letters written to someone). Three entries: 1 (early), 4 (middle), 7 (late) — arc teaches Letting Go. POV chapter: Ch. 18 "Wrong Apartment." She doesn\'t miss the relationship. She misses him.'},
+  {name:'Lucy Bennett',role:'New to Los Angeles · Entrepreneur / Architect / Chef',color:'#34d399',emoji:'L',
+   trait:'Radical curiosity',
+   flaw:'Protects her heart by overthinking',
+   lesson_short:'GROWTH',
+   lesson:'Lucy taught Eli that love is not a feeling that arrives — it\'s a practice that requires becoming. She challenged every story he told himself about love, settling, and what he deserved. Without Lucy, Eli would have arrived at the door as the man he was. Because of Lucy, he arrives as the man he became.',
+   notes:'Anonymous Entry format: Deleted Recording (voice memos started and erased). Three entries: 3, 5, 8 — arc teaches Growth. POV chapter: Ch. 20 "Growth." She steps back not because she lost but because she understood. Most emotionally mature character in the novel.'},
+  {name:'Ryan Sullivan',role:'Architect · Age 35 · Not The Rival — The Proof',color:'#fbbf24',emoji:'R',
+   trait:'Steady — dependable in the way that only comes from consistently choosing to be',
+   flaw:'Wants certainty in a way Grace doesn\'t and can\'t',
+   lesson_short:'THE PROOF',
+   lesson:'Ryan is not the obstacle. Ryan is the proof. Proof that Grace\'s feelings for Eli cannot be explained away as lack of alternatives. A weak Ryan makes Grace an easy choice. A strong Ryan makes Grace a complicated one. The distinction is everything.',
+   notes:'The relationship that happens on purpose vs. the one that happened accidentally. Mirrored to Natalie — she left and convinced herself she made the right decision; he left and never fully convinced himself of anything. Came back deliberately, knowing exactly what he wants.'}
+];
+
+let characters = [], editingCharId = null;
+
+async function loadCharacters() {
+  const d = await sb('characters?order=created_at');
+  if(d === null) { console.warn('characters table missing — run SQL setup'); return; }
+  characters = d;
+  if(!characters.length) await seedCharacters();
+}
+
+async function seedCharacters() {
+  for(const c of DEFAULT_CHARACTERS) {
+    await sb('characters', {method:'POST', body:JSON.stringify(c), headers:{...h,'Prefer':'return=representation'}});
+  }
+  const d = await sb('characters?order=created_at');
+  if(d) characters = d;
+}
+
+function renderCharacters() {
+  const grid = document.getElementById('char-grid');
+  if(!characters.length){grid.innerHTML='<div class="empty-state"><i class="fas fa-users"></i><p>No characters yet</p></div>';return;}
+  grid.innerHTML = characters.map(c=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s;cursor:default" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">
+        <div style="width:44px;height:44px;border-radius:50%;background:${c.color}22;color:${c.color};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0">${escHtml(c.emoji||c.name.slice(0,1))}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:600;color:var(--text)">${escHtml(c.name)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${escHtml(c.role||'')}</div>
+        </div>
+        <button class="btn btn-sm" onclick="openEditChar('${c.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+      </div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Core Trait</span><span style="color:var(--text2);line-height:1.4">${escHtml(c.trait||'—')}</span></div>
+        <div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Biggest Flaw</span><span style="color:var(--text2);line-height:1.4">${escHtml(c.flaw||'—')}</span></div>
+        ${c.lesson_short?`<div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Teaches</span><span style="font-weight:600;letter-spacing:.04em;color:${c.color}">${escHtml(c.lesson_short)}</span></div>`:''}
+        ${c.lesson?`<div style="margin-top:6px;padding:10px 12px;border-radius:var(--radius-sm);background:${c.color}0d;border:1px solid ${c.color}22;font-size:12px;line-height:1.55;color:var(--text2);font-style:italic">${escHtml(c.lesson)}</div>`:''}
+        ${c.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">${escHtml(c.notes)}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openEditChar(id) {
+  const c = characters.find(x=>x.id===id);
+  if(!c) return;
+  editingCharId=id;
+  document.getElementById('modal-char-title').textContent='Edit Character';
+  document.getElementById('char-name').value=c.name||'';
+  document.getElementById('char-role').value=c.role||'';
+  document.getElementById('char-color').value=c.color||'#8b7cf6';
+  document.getElementById('char-emoji').value=c.emoji||'';
+  document.getElementById('char-trait').value=c.trait||'';
+  document.getElementById('char-flaw').value=c.flaw||'';
+  document.getElementById('char-lesson-short').value=c.lesson_short||'';
+  document.getElementById('char-lesson').value=c.lesson||'';
+  document.getElementById('char-notes').value=c.notes||'';
+  document.getElementById('char-edit-id').value=id;
+  openModal('modal-character');
+}
+
+async function saveCharacter() {
+  const payload={
+    name:document.getElementById('char-name').value.trim()||'Unnamed',
+    role:document.getElementById('char-role').value.trim(),
+    color:document.getElementById('char-color').value,
+    emoji:document.getElementById('char-emoji').value.trim(),
+    trait:document.getElementById('char-trait').value.trim(),
+    flaw:document.getElementById('char-flaw').value.trim(),
+    lesson_short:document.getElementById('char-lesson-short').value.trim(),
+    lesson:document.getElementById('char-lesson').value.trim(),
+    notes:document.getElementById('char-notes').value.trim()
+  };
+  const eid=document.getElementById('char-edit-id').value;
+  if(eid){ await sb(`characters?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Character updated'); }
+  else { await sb('characters',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Character added'); }
+  closeModal('modal-character');
+  document.getElementById('char-edit-id').value='';
+  editingCharId=null;
+  await loadCharacters(); renderCharacters();
+}
+
+// ─── TIMELINE ─────────────────────────────────────────────
+const DEFAULT_EVENTS = [
+  {part:'pre',chapter:'High School',title:'They Meet & The Foundation',description:'Three years of high school. The friendship deepens. Two almost moments: Prom (public) and one night that felt different (private). The only time in twenty years both windows were open simultaneously. Neither had the language yet.',tags:'grace,eli,window',sort_order:10},
+  {part:'pre',chapter:'Year 8-9',title:'Ryan Arrives — Second Window Closes',description:'She begins dating Ryan. He is available. The window was open on both sides for the first time since high school. Neither saw it before it closed.',tags:'grace,ryan,window',sort_order:20},
+  {part:'pre',chapter:'Years 9-13',title:'Both Unavailable — Five Years',description:'Eli serious with Natalie. Grace with Ryan. Both unavailable simultaneously. Everything filed under "we\'re both taken."',tags:'eli,natalie,grace,ryan',sort_order:30},
+  {part:'pre',chapter:'Year 13',title:'Third Window — Opens on Her Side Only',description:'Ryan and Grace break up. She teaches herself not to look in that direction. Eli still with Natalie. The habit becomes so ingrained she stops noticing it.',tags:'grace,ryan,window',sort_order:40},
+  {part:'pre',chapter:'Year 14',title:'The Airport — Almost Moment 02',description:'Natalie leaves for the dream job. 43 minutes pretending it\'s a normal day. The hug that becomes something else. Bye, not goodbye. He sits in the departure lane. He could have said something.',tags:'eli,natalie,almost',sort_order:50},
+  {part:'pre',chapter:'Year 15',title:'The Accidental Call — Almost Moment 03',description:'She pocket-dials him. Two hours disappear. The easy rhythm returns. Neither calls back. Neither investigates why. A load-bearing event in the pre-story architecture.',tags:'eli,natalie,almost',sort_order:60},
+  {part:'1',chapter:'Ch. 1',title:'In The Frame',description:'Eli at work. Warm, funny, in control of every frame except his own. Introduce the filmmaking lens. Porch light motif first appearance — a directing note about hesitating in a doorway.',tags:'eli',sort_order:100},
+  {part:'1',chapter:'Ch. 2',title:'The Conversation',description:'Natalie receives the opportunity. No villain. Two adults quietly approaching a fracture. Curated image motif — the room cleaned too thoroughly. Unfinished film first mention.',tags:'eli,natalie',sort_order:110},
+  {part:'1',chapter:'Ch. 3',title:'The Choice',description:'Eli realizes he could follow her. Chooses not to — loves her enough to lose her cleanly rather than slowly. Neither tells the other the full truth. That gap is the emotional foundation everything else stands on.',tags:'eli,natalie',sort_order:120},
+  {part:'1',chapter:'Entry 1',title:'Anonymous Entry 1 — Natalie',description:'Never Sent. "I keep thinking about the drive home." First fragment. Reader doesn\'t know who wrote it.',tags:'natalie,entry',sort_order:125},
+  {part:'1',chapter:'Ch. 4',title:'The Night Of — Almost Moment 01',description:'Grace arrives with the emergency kit. Takeout. A movie neither watches. Her head on his shoulder. The thought he doesn\'t finish. Filed under exhaustion. Reader files it differently.',tags:'eli,grace,almost',sort_order:130},
+  {part:'1',chapter:'Ch. 5',title:'The Airport',description:'Almost Moment 02 in story present. The forty-three minute drive. A love scene disguised as a farewell.',tags:'eli,natalie,almost',sort_order:140},
+  {part:'1',chapter:'Ch. 6',title:'The Story He Tells Himself',description:'Eli quietly concludes: love doesn\'t work out for me. Not like the movies. He calls it maturity. This is the lie that drives the novel — fear disguised as wisdom.',tags:'eli',sort_order:150},
+  {part:'2',chapter:'Ch. 7',title:'The New Cut',description:'Life after Natalie. Settled is harder to see through than sad. New city motif begins.',tags:'eli',sort_order:200},
+  {part:'2',chapter:'Entry 2',title:'Anonymous Entry 2 — Grace',description:'Draft Unsaved. "started writing this as a list of reasons why familiarity isn\'t the same as love / got four items in / then he called." Reader doesn\'t know who wrote it.',tags:'grace,entry',sort_order:205},
+  {part:'2',chapter:'Ch. 8',title:'Grace, As Always',description:'Coffee. Calls. Consistency. Presence. She leaves coffee. She always leaves coffee. He has never once thought about what it means to leave coffee. Porch light Ch. 8 appearance.',tags:'eli,grace',sort_order:210},
+  {part:'2',chapter:'Ch. 9',title:'Lucy — Almost Moment 04',description:'The meeting. Wrong place, perfect timing. She asks the question nobody asks. He asks for her number — something he never does. New city motif begins.',tags:'eli,lucy,almost',sort_order:220},
+  {part:'2',chapter:'Ch. 10',title:'The First Conversation',description:'Two hours disappear. He cannot remember the last time he talked to someone like that.',tags:'eli,lucy',sort_order:230},
+  {part:'2',chapter:'Entry 3',title:'Anonymous Entry 3 — Lucy',description:'Deleted Recording. "I\'m not looking for anything serious." Early entry. Reader begins forming theories.',tags:'lucy,entry',sort_order:235},
+  {part:'2',chapter:'Ch. 11',title:'The Drive Home — Almost Moment 05',description:'The specific silence. Windows down despite the cold. He\'s replaying the silence, not the conversation. New city motif.',tags:'eli,lucy,almost',sort_order:240},
+  {part:'2',chapter:'Ch. 12',title:'The Kitchen — Almost Moment 06',description:'Lucy\'s apartment — lived in, not curated. Work and waiting aren\'t the same thing. Something that had been running for years just stopped.',tags:'eli,lucy,almost',sort_order:250},
+  {part:'2',chapter:'Ch. 13',title:'The First Disappearance — Almost Moment 07',description:'Lucy pulls away. Eli ends up in Grace\'s kitchen. Why does it matter so much? He has no answer. Never stops to wonder why she\'s the person who asked.',tags:'eli,grace,lucy,almost',sort_order:260},
+  {part:'2',chapter:'Entry 4',title:'Anonymous Entry 4 — Natalie',description:'Never Sent. "I miss who we were." Middle entry. Reader starts connecting fragments.',tags:'natalie,entry',sort_order:265},
+  {part:'2',chapter:'Ch. 14',title:'The Hallway — Almost Moment 10',description:'Lucy\'s hand on his chest. His heartbeat faster than either expected. Her expression: recognition, not surprise. The tension dissolves into a monster joke.',tags:'eli,lucy,almost',sort_order:270},
+  {part:'2',chapter:'Ch. 15',title:'The Wedding — Almost Moment 08',description:'Eli and Grace arrive together. The dance. His hand more deliberate. Three people at separate tables notice. The simultaneous no/nope. Porch light motif — warm amber light near her.',tags:'eli,grace,almost',sort_order:280},
+  {part:'2',chapter:'Ch. 16',title:'Ryan, Briefly',description:'Grace casually mentions Ryan. Eli files it under "good for her." Doesn\'t examine the pause before he filed it.',tags:'eli,grace,ryan',sort_order:290},
+  {part:'3',chapter:'Ch. 17',title:'The Accidental Call — Almost Moment 03',description:'Natalie pocket-dials. Two hours disappear. Neither calls back. Neither investigates why.',tags:'eli,natalie,almost',sort_order:300},
+  {part:'3',chapter:'Entry 5',title:'Anonymous Entry 5 — Lucy',description:'Deleted Recording. "I notice things. That\'s my whole problem." Middle entry. Pattern becomes visible.',tags:'lucy,entry',sort_order:305},
+  {part:'3',chapter:'Ch. 18',title:'Wrong Apartment — Natalie POV',description:'NATALIE\'S CHAPTER. She accidentally drives to the old apartment. The list — she got almost everything. It should feel victorious. It doesn\'t. She doesn\'t miss the relationship. She misses him. She almost calls. Drives away. The apartment disappears in her rearview. The feeling doesn\'t.',tags:'natalie',sort_order:310},
+  {part:'3',chapter:'Ch. 19',title:'The Missed Call — Almost Moment 11',description:'He calls Grace at 11:47pm. She doesn\'t answer. 2:13am: "Sorry. Was out. Ryan." For the first time in twenty years he needed her and she was somewhere else.',tags:'eli,grace,ryan,almost',sort_order:320},
+  {part:'3',chapter:'Ch. 20',title:'Lucy\'s Chapter — Growth — Lucy POV',description:'LUCY\'S CHAPTER. She realizes Eli talks about Grace differently. Not the way men talk about women they want — the way people talk about somewhere they\'ve always felt safe. She steps back not because she lost but because she understood.',tags:'lucy',sort_order:330},
+  {part:'3',chapter:'Entry 6',title:'Anonymous Entry 6 — Grace',description:'Draft Unsaved. "should probably stop using him as the benchmark." Middle entry. Reader feels the accumulation.',tags:'grace,entry',sort_order:335},
+  {part:'3',chapter:'Ch. 21',title:'The Window — Almost Moment 09',description:'THE FIRST WINDOW. One of them almost says the true thing — "Do you ever think about—" and pulls back. HE LETS HER NOT FINISH IT. Because some part of him doesn\'t want to know. That\'s the window. The reader wants to scream.',tags:'eli,grace,almost,window',sort_order:340},
+  {part:'3',chapter:'Ch. 22',title:'Future Tense',description:'Eli begins imagining different futures. Something has shifted in him without announcement. He doesn\'t name what shifted.',tags:'eli',sort_order:350},
+  {part:'3',chapter:'Ch. 23',title:'The Conversation — Almost Moment 12',description:'Coffee with Natalie. "I missed you. Not romantic. Just true." He realizes if she\'d come back sooner he would have really listened. The realization rattles him.',tags:'eli,natalie,almost',sort_order:360},
+  {part:'3',chapter:'Entry 7',title:'Anonymous Entry 7 — Natalie',description:'Never Sent. "I miss him." Three-entry arc completes. Reader finally understands what she\'s been writing about.',tags:'natalie,entry',sort_order:365},
+  {part:'3',chapter:'Ch. 24',title:'The Overlap — Almost Moment 13',description:'The film premiere. Past, present, possibility all at once. For the first time he wonders if he\'s been asking the wrong question.',tags:'eli,natalie,lucy,grace,almost',sort_order:370},
+  {part:'4',chapter:'Ch. 25',title:'Wrong Person — Almost Moment 14',description:'Ryan is good. Funny. Thoughtful. Why did seeing her with the right person feel like seeing her with the wrong one? When Ryan leaves the old rhythm returns immediately. Like a song.',tags:'eli,grace,ryan,almost',sort_order:400},
+  {part:'4',chapter:'Ch. 26',title:'The Life She Could Choose',description:'Grace genuinely considers Ryan. Not a placeholder. A real future. Eli watches this without fully understanding what he\'s watching.',tags:'eli,grace,ryan',sort_order:410},
+  {part:'4',chapter:'Entry 8',title:'Anonymous Entry 8 — Lucy',description:'Deleted Recording. "I don\'t know if protecting my peace and protecting my heart are the same thing anymore." Her arc completes quietly.',tags:'lucy,entry',sort_order:415},
+  {part:'4',chapter:'Ch. 27',title:'Grace\'s Chapter — Staying — Grace POV',description:'GRACE\'S CHAPTER. She does the math on the windows. Twenty years. Never both available at the same time. Not once. She built an entire life around the assumption that Eli was not an option — and that assumption was so old she stopped examining it. One chapter. Full weight. No distribution.',tags:'grace,window',sort_order:420},
+  {part:'4',chapter:'Ch. 28',title:'The Story He Keeps Telling — Almost Moment 15',description:'The screenplay. He\'s searching for the person who makes all of those things feel like they belong together. He stops typing. "Because that isn\'t the screenplay. Or at least it isn\'t only the screenplay."',tags:'eli,almost',sort_order:430},
+  {part:'4',chapter:'Ch. 29',title:'The Last Window',description:'THE LAST WINDOW. Both feel the cost of stepping through. Neither steps. This window is not missed because they don\'t understand. It is missed because they do. That distinction is everything.',tags:'eli,grace,window',sort_order:440},
+  {part:'4',chapter:'Ch. 30',title:'Grace and Ryan',description:'Ryan asks Grace something simple: if he asked, what would you do? Grace doesn\'t answer immediately. The pause is everything. First time in twenty years someone asked the question out loud.',tags:'grace,ryan',sort_order:450},
+  {part:'4',chapter:'Entry 9',title:'Anonymous Entry 9 — Grace',description:'Draft Unsaved. "maybe I\'ve been lying to myself." The most loaded entry in the book. Placed after the Ryan question, it lands like a confession.',tags:'grace,entry',sort_order:455},
+  {part:'4',chapter:'Ch. 31',title:'The Arithmetic of Almost — Almost Moment 15',description:'Eli finally starts adding. The couch. The wedding. The missed call. The airport. The hallway. The coffee. The windows. He stops evaluating individual scenes and starts seeing the movie.',tags:'eli,almost',sort_order:460},
+  {part:'4',chapter:'Ch. 32',title:'The Last Ordinary Day',description:'"Nothing had changed. The only thing that was different was me. Which turned out to be enough." This is not the day he chooses. This is the day he becomes capable of choosing.',tags:'eli',sort_order:470},
+  {part:'5',chapter:'Ch. 33',title:'What Love Means',description:'The breakthrough. Natalie taught him letting go. Lucy taught him growth. Grace taught him staying. These are not competing ideas. They are components. He picks up his phone.',tags:'eli',sort_order:500},
+  {part:'5',chapter:'Ch. 34',title:'Final Entry — Chapter Status',description:'Entry 9 elevated. The anonymous voice steps forward for one chapter. "Love is who remains recognizable after time has done everything it can to alter the picture. Love is who you reach for before you\'ve decided to." The voice steps back. Eli drives.',tags:'entry',sort_order:510},
+  {part:'5',chapter:'Ch. 35',title:'On My Way To You',description:'The drive. Three texts: "Are you busy right now?" / "No, what\'s up?" / "On my way to you." The title becomes dialogue. He drives. No detours. The city at night one last time. He understands what the unfinished film was about.',tags:'eli',sort_order:520},
+  {part:'5',chapter:'Ch. 36',title:'The Door — Almost Moment 16',description:'A knock. A pause. The door opens. For a moment neither of them speaks. Then she smiles. End. Every motif in the book arrives simultaneously: porch light, late night drive, silence, unfinished film gone, coffee remembered.',tags:'eli,grace,almost',sort_order:530}
+];
+
+let timelineEvents = [], editingEventId = null;
+const PART_META = {
+  pre:{label:'Pre-Story',color:'var(--text3)',bg:'var(--bg3)'},
+  '1':{label:'Part One — Letting Go',color:'var(--blue)',bg:'rgba(96,165,250,.08)'},
+  '2':{label:'Part Two — Growth',color:'var(--green)',bg:'rgba(52,211,153,.08)'},
+  '3':{label:'Part Three — What Returns',color:'var(--amber)',bg:'rgba(251,191,36,.08)'},
+  '4':{label:'Part Four — Staying',color:'#fb923c',bg:'rgba(251,146,60,.08)'},
+  '5':{label:'Part Five — The Knock',color:'var(--accent)',bg:'rgba(139,124,246,.08)'}
+};
+const TAG_COLORS = {almost:'rgba(251,191,36,.12)|#fbbf24',eli:'rgba(139,124,246,.12)|#a78bfa',grace:'rgba(251,146,60,.12)|#fb923c',natalie:'rgba(96,165,250,.12)|#60a5fa',lucy:'rgba(52,211,153,.12)|#34d399',ryan:'rgba(248,113,113,.12)|#f87171',entry:'rgba(255,255,255,.05)|var(--text3)',window:'rgba(248,113,113,.15)|var(--red)'};
+
+async function loadTimeline() {
+  const d = await sb('timeline_events?order=sort_order');
+  if(d === null) { console.warn('timeline_events table missing — run SQL setup'); return; }
+  timelineEvents = d;
+  if(!timelineEvents.length) await seedTimeline();
+}
+
+async function seedTimeline() {
+  for(const ev of DEFAULT_EVENTS) {
+    await sb('timeline_events', {method:'POST', body:JSON.stringify(ev), headers:{...h,'Prefer':'return=representation'}});
+  }
+  const d = await sb('timeline_events?order=sort_order');
+  if(d) timelineEvents = d;
+}
+
+function renderTimeline() {
+  const wrap = document.getElementById('timeline-wrap');
+  if(!timelineEvents.length){wrap.innerHTML='<div class="empty-state"><i class="fas fa-stream"></i><p>No timeline events yet</p></div>';return;}
+  const parts = ['pre','1','2','3','4','5'];
+  wrap.innerHTML = parts.map(p=>{
+    const evs = timelineEvents.filter(e=>e.part===p);
+    if(!evs.length) return '';
+    const meta = PART_META[p]||{label:p,color:'var(--text2)',bg:'var(--bg3)'};
+    return `<div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:4px 12px;border-radius:20px;background:${meta.bg};color:${meta.color};white-space:nowrap">${meta.label}</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-left:16px;border-left:2px solid var(--border)">
+        ${evs.map(ev=>{
+          const tags=(ev.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+          const tc=TAG_COLORS;
+          return `<div style="position:relative;display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:var(--radius-sm);transition:background .12s;cursor:pointer" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'" onclick="openEditEvent('${ev.id}')">
+            <div style="position:absolute;left:-21px;top:14px;width:10px;height:10px;border-radius:50%;background:${meta.color};border:2px solid var(--bg)"></div>
+            <div style="font-size:11px;color:var(--text3);min-width:60px;padding-top:1px;flex-shrink:0">${escHtml(ev.chapter||'')}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px">${escHtml(ev.title||'')}</div>
+              ${ev.description?`<div style="font-size:12px;color:var(--text2);line-height:1.55">${escHtml(ev.description)}</div>`:''}
+              ${tags.length?`<div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">${tags.map(t=>{const[bg,col]=(tc[t]||'rgba(255,255,255,.05)|var(--text3)').split('|');return`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${bg};color:${col}">${escHtml(t)}</span>`;}).join('')}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openEditEvent(id) {
+  const ev = timelineEvents.find(e=>e.id===id);
+  if(!ev) return;
+  editingEventId=id;
+  document.getElementById('modal-event-title').textContent='Edit Event';
+  document.getElementById('ev-chapter').value=ev.chapter||'';
+  document.getElementById('ev-part').value=ev.part||'1';
+  document.getElementById('ev-title').value=ev.title||'';
+  document.getElementById('ev-desc').value=ev.description||'';
+  document.getElementById('ev-tags').value=ev.tags||'';
+  document.getElementById('ev-order').value=ev.sort_order||'';
+  document.getElementById('ev-edit-id').value=id;
+  openModal('modal-event');
+}
+
+function openAddEvent() {
+  editingEventId=null;
+  document.getElementById('modal-event-title').textContent='Add Event';
+  ['ev-chapter','ev-title','ev-desc','ev-tags','ev-order'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ev-part').value='1';
+  document.getElementById('ev-edit-id').value='';
+  openModal('modal-event');
+}
+
+async function saveEvent() {
+  const payload={
+    chapter:document.getElementById('ev-chapter').value.trim(),
+    part:document.getElementById('ev-part').value,
+    title:document.getElementById('ev-title').value.trim()||'Untitled',
+    description:document.getElementById('ev-desc').value.trim(),
+    tags:document.getElementById('ev-tags').value.trim(),
+    sort_order:parseInt(document.getElementById('ev-order').value)||999
+  };
+  const eid=document.getElementById('ev-edit-id').value;
+  if(eid){ await sb(`timeline_events?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Event updated'); }
+  else { await sb('timeline_events',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Event added'); }
+  closeModal('modal-event');
+  document.getElementById('ev-edit-id').value=''; editingEventId=null;
+  await loadTimeline(); renderTimeline();
+}
+
+// ─── BOOT ─────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
+<!-- ============================================================
+     PATCH: AI ASSISTANT + CHARACTER PROFILES + TIMELINE
+     Appended to index.html — inject via str_replace below
+============================================================ -->
