@@ -1168,15 +1168,27 @@ async function aiNewChat() {
 
 async function loadAiChat(id) {
   currentAiChatId = id;
+  // Re-fetch from DB to get latest messages
+  const fresh = await sb(`ai_chats?id=eq.${id}`);
+  if(fresh && fresh[0]) {
+    const idx = aiChats.findIndex(c=>c.id===id);
+    if(idx>=0) aiChats[idx] = fresh[0];
+    else aiChats.unshift(fresh[0]);
+  }
   const chat = aiChats.find(c=>c.id===id);
   if(!chat) return;
   document.getElementById('ai-chat-name-display').textContent = chat.title||'';
   renderAiChatList();
   const msgs = JSON.parse(chat.messages||'[]');
   const container = document.getElementById('ai-messages');
-  document.getElementById('ai-empty').style.display = 'none';
+  const empty = document.getElementById('ai-empty');
+  if(empty) empty.style.display = 'none';
   container.innerHTML = '';
-  msgs.forEach(m=>appendAiMessage(m.role, m.content, false));
+  if(msgs.length === 0) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px">New chat started — ask anything about your novel</div>';
+  } else {
+    msgs.forEach(m=>appendAiMessage(m.role, m.content, false));
+  }
   container.scrollTop = container.scrollHeight;
 }
 
@@ -1244,8 +1256,15 @@ async function aiSend() {
         messages: msgs.map(m=>({role:m.role,content:m.content}))
       })
     });
+    if(!resp.ok) {
+      const errText = await resp.text();
+      container.removeChild(thinking);
+      appendAiMessage('assistant', `Error ${resp.status}: ${errText}`);
+      aiStreaming=false; document.getElementById('ai-send-btn').disabled=false;
+      return;
+    }
     const data = await resp.json();
-    const reply = data.content?data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n'):'Sorry, I couldn\'t generate a response.';
+    const reply = data.content?data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n'):(data.error?'API Error: '+data.error.message:'Sorry, no response received.');
     container.removeChild(thinking);
     appendAiMessage('assistant', reply);
     msgs.push({role:'assistant', content:reply});
@@ -1254,12 +1273,14 @@ async function aiSend() {
     const updatePayload = {messages:JSON.stringify(msgs), updated_at:new Date().toISOString()};
     if(msgs.length===2) updatePayload.title = text.slice(0,50)+(text.length>50?'…':'');
     await sb(`ai_chats?id=eq.${currentAiChatId}`, {method:'PATCH', body:JSON.stringify(updatePayload)});
+    // Update local cache
+    const chatIdx = aiChats.findIndex(c=>c.id===currentAiChatId);
+    if(chatIdx>=0) aiChats[chatIdx].messages = JSON.stringify(msgs);
     await loadAiChats();
-    if(chat) chat.messages=JSON.stringify(msgs);
     if(updatePayload.title) document.getElementById('ai-chat-name-display').textContent=updatePayload.title;
   } catch(e) {
-    container.removeChild(thinking);
-    appendAiMessage('assistant','Sorry, something went wrong: '+e.message);
+    if(container.contains(thinking)) container.removeChild(thinking);
+    appendAiMessage('assistant','Network error: '+e.message+'. Check that the Netlify function deployed correctly.');
   }
   aiStreaming=false;
   document.getElementById('ai-send-btn').disabled=false;
