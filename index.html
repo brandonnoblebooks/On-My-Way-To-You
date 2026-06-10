@@ -202,6 +202,9 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-item" onclick="showTab('ai',this)"><i class="fas fa-robot"></i>AI Assistant</div>
       <div class="nav-item" onclick="showTab('characters',this)"><i class="fas fa-users"></i>Characters</div>
       <div class="nav-item" onclick="showTab('timeline',this)"><i class="fas fa-stream"></i>Timeline</div>
+      <div class="nav-section">Writing</div>
+      <div class="nav-item" onclick="showTab('tasks',this)"><i class="fas fa-tasks"></i>Tasks</div>
+      <div class="nav-item" onclick="showTab('milestones',this)"><i class="fas fa-flag"></i>Milestones</div>
     </div>
     <div class="authors-box">
       <div class="authors-label">Co-Authors</div>
@@ -373,6 +376,43 @@ select.form-input option{background:var(--bg2)}
         </div>
       </div>
 
+      <!-- ═══ TASKS ═══ -->
+      <div id="tab-tasks" class="tab">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#60a5fa;display:inline-block"></span>To Do</div>
+            <div id="tasks-todo" style="display:flex;flex-direction:column;gap:7px;min-height:60px"></div>
+          </div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#fbbf24;display:inline-block"></span>In Progress</div>
+            <div id="tasks-progress" style="display:flex;flex-direction:column;gap:7px;min-height:60px"></div>
+          </div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>Done</div>
+            <div id="tasks-done" style="display:flex;flex-direction:column;gap:7px;min-height:60px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MILESTONES ═══ -->
+      <div id="tab-milestones" class="tab">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px" id="milestone-stats">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total Milestones</div>
+            <div id="ms-total" style="font-size:24px;font-weight:600;color:var(--accent)">—</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Completed</div>
+            <div id="ms-done" style="font-size:24px;font-weight:600;color:var(--green)">—</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Next Deadline</div>
+            <div id="ms-next" style="font-size:16px;font-weight:600;color:var(--amber)">—</div>
+          </div>
+        </div>
+        <div id="milestones-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -503,6 +543,103 @@ select.form-input option{background:var(--bg2)}
   </div>
 </div>
 
+<!-- CHAPTER EDITOR OVERLAY -->
+<div id="chapter-editor-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
+    <button class="btn btn-sm" onclick="closeChapterEditor()"><i class="fas fa-arrow-left"></i> Chapters</button>
+    <div style="flex:1;display:flex;align-items:center;gap:10px">
+      <span id="editor-chap-num" style="font-size:12px;color:var(--text3)"></span>
+      <input id="editor-title" style="background:transparent;border:none;font-size:16px;font-weight:600;color:var(--text);outline:none;flex:1" placeholder="Chapter title…"/>
+    </div>
+    <select id="editor-status" class="form-input" style="width:auto;padding:5px 10px;font-size:12px">
+      <option value="outline">Outline</option>
+      <option value="draft">Draft</option>
+      <option value="review">In Review</option>
+      <option value="done">Done</option>
+    </select>
+    <div style="font-size:12px;color:var(--text3)" id="editor-wc-display">0 words</div>
+    <button class="btn btn-primary btn-sm" onclick="saveChapterEditor()"><i class="fas fa-save"></i> Save</button>
+    <button class="btn btn-sm" onclick="showEditorTab('brief')" id="btn-brief" style="font-size:11px">Brief</button>
+    <button class="btn btn-sm" onclick="showEditorTab('history')" id="btn-history" style="font-size:11px">History</button>
+  </div>
+  <div style="flex:1;display:flex;overflow:hidden">
+    <!-- WRITING AREA -->
+    <div id="editor-write-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <textarea id="editor-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:40px max(40px,calc(50% - 380px));font-size:15px;line-height:1.8;font-family:Georgia,serif;resize:none;overflow-y:auto" placeholder="Start writing…" oninput="editorWordCount()"></textarea>
+    </div>
+    <!-- BRIEF PANEL -->
+    <div id="editor-brief-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Chapter Brief</div>
+      <div id="editor-brief-content" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--text2);line-height:1.65;white-space:pre-wrap"></div>
+    </div>
+    <!-- HISTORY PANEL -->
+    <div id="editor-history-panel" style="width:380px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Version History</span>
+        <button class="btn btn-sm btn-primary" onclick="saveVersion()" style="font-size:11px;padding:4px 10px"><i class="fas fa-bookmark"></i> Save Version</button>
+      </div>
+      <div id="editor-history-list" style="flex:1;overflow-y:auto;padding:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal-bg" id="modal-task">
+  <div class="modal">
+    <div class="modal-title" id="modal-task-title">Add Task</div>
+    <div class="form-group"><label class="form-label">Task</label><input class="form-input" id="task-title" placeholder="e.g. Revise Ch. 3 ending"/></div>
+    <div class="form-group"><label class="form-label">Type</label>
+      <select class="form-input" id="task-type">
+        <option value="chapter">Chapter-specific</option>
+        <option value="general">General</option>
+      </select>
+    </div>
+    <div class="form-group" id="task-chapter-group"><label class="form-label">Chapter</label>
+      <select class="form-input" id="task-chapter"><option value="">— None —</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Assigned To</label><select class="form-input" id="task-author"></select></div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select class="form-input" id="task-status">
+        <option value="todo">To Do</option>
+        <option value="progress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="task-notes" placeholder="Optional details…"></textarea></div>
+    <input type="hidden" id="task-edit-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-task')">Cancel</button>
+      <button class="btn btn-danger" id="task-delete-btn" onclick="deleteTask()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MILESTONE MODAL -->
+<div class="modal-bg" id="modal-milestone">
+  <div class="modal">
+    <div class="modal-title" id="modal-ms-title">Add Milestone</div>
+    <div class="form-group"><label class="form-label">Milestone</label><input class="form-input" id="ms-title" placeholder="e.g. First draft of Part One complete"/></div>
+    <div class="form-group"><label class="form-label">Target Date</label><input class="form-input" type="date" id="ms-date"/></div>
+    <div class="form-group"><label class="form-label">Word Count Goal</label><input class="form-input" type="number" id="ms-wc" placeholder="e.g. 20000 (optional)"/></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="ms-notes" placeholder="What does hitting this milestone mean?"></textarea></div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select class="form-input" id="ms-status">
+        <option value="upcoming">Upcoming</option>
+        <option value="inprogress">In Progress</option>
+        <option value="complete">Complete</option>
+        <option value="missed">Missed</option>
+      </select>
+    </div>
+    <input type="hidden" id="ms-edit-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-milestone')">Cancel</button>
+      <button class="btn btn-danger" id="ms-delete-btn" onclick="deleteMilestone()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveMilestone()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -545,7 +682,7 @@ let currentAuthorId = null;
 // ─── INIT ─────────────────────────────────────────────────
 async function init() {
   await loadAuthors();
-  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline()]);
+  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline(),loadTasks(),loadMilestones()]);
   renderDashboard();
   setupRealtime();
   setupDragDrop();
@@ -609,18 +746,21 @@ async function loadChapters() {
 
 function renderChapters() {
   const el = document.getElementById('chapters-list');
-  if(!chapters.length) { el.innerHTML='<div class="empty-state"><i class="fas fa-list-ol"></i><p>No chapters yet</p></div>'; return; }
+  if(!chapters.length) {
+    el.innerHTML=`<div class="empty-state"><i class="fas fa-list-ol"></i><p style="margin-bottom:12px">No chapters yet</p><button class="btn btn-primary" onclick="seedChaptersFromSpine()"><i class="fas fa-magic"></i> Load All 36 Chapters from Story Spine</button></div>`;
+    return;
+  }
   el.innerHTML = chapters.map(c=>{
     const auth = authors.find(a=>a.id===c.author_id);
     const pct = {outline:5,draft:35,review:75,done:100}[c.status]||0;
-    return `<div class="chapter-card" onclick="openEditChapter('${c.id}')">
+    return `<div class="chapter-card" onclick="openChapterEditor('${c.id}')">
       <div class="chapter-top">
         <div class="chap-num">Ch. ${c.number}</div>
         <div class="chap-title">${escHtml(c.title)}</div>
         <span class="badge badge-${c.status==='review'?'review':c.status==='done'?'done':c.status==='draft'?'draft':'outline'}">${statusLabel(c.status)}</span>
       </div>
       <div class="progress-bar" style="margin-top:9px"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':''} ${auth?'· '+auth.name:''} ${c.notes?'· '+escHtml(c.notes.slice(0,60))+(c.notes.length>60?'…':''):''}</div>
+      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':'0 words'} ${auth?'· '+auth.name:''} ${c.notes?'· '+escHtml(c.notes.slice(0,50))+(c.notes.length>50?'…':''):''}</div>
     </div>`;
   }).join('');
 }
@@ -973,6 +1113,8 @@ const tabConfig = {
   ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>aiNewChat()},
   characters:{title:'Characters', action:'Add Character', actionFn:()=>{document.getElementById('char-edit-id').value='';document.getElementById('modal-char-title').textContent='Add Character';['char-name','char-role','char-emoji','char-trait','char-flaw','char-lesson-short','char-lesson','char-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('char-color').value='#8b7cf6';openModal('modal-character');}},
   timeline:{title:'Timeline & Plot Map', action:'Add Event', actionFn:()=>openAddEvent()},
+  tasks:{title:'Tasks', action:'Add Task', actionFn:()=>openAddTask()},
+  milestones:{title:'Milestones', action:'Add Milestone', actionFn:()=>openAddMilestone()},
 };
 
 function showTab(tab, el) {
@@ -991,6 +1133,8 @@ function showTab(tab, el) {
   if(tab==='discuss') renderDiscussion();
   if(tab==='characters') renderCharacters();
   if(tab==='timeline') renderTimeline();
+  if(tab==='tasks') { populateTaskChapterSelect(); populateTaskAuthorSelect(); renderTasks(); }
+  if(tab==='milestones') renderMilestones();
   if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
 }
 
@@ -1241,30 +1385,39 @@ async function aiSend() {
   if(aiStreaming) return;
   const input = document.getElementById('ai-input');
   const text = input.value.trim();
-  if(!text) return;
-  if(!currentAiChatId) { await aiNewChat(); }
+  if(!text) { toast('Type a message first'); return; }
+
+  // Ensure we have a chat open
+  if(!currentAiChatId) {
+    await aiNewChat();
+    if(!currentAiChatId) { toast('Could not create chat — check Supabase connection'); return; }
+  }
+
   input.value=''; input.style.height='';
+  aiStreaming=true;
+  document.getElementById('ai-send-btn').disabled=true;
+
+  // Show user message immediately
   appendAiMessage('user', text);
 
-  // Load current messages
+  // Build message history
   const chat = aiChats.find(c=>c.id===currentAiChatId);
   const msgs = JSON.parse(chat?chat.messages||'[]':'[]');
   msgs.push({role:'user', content:text});
 
-  // Show thinking indicator
+  // Show thinking dots
   const container = document.getElementById('ai-messages');
   const thinking = document.createElement('div');
-  thinking.style.cssText='display:flex;align-items:center;gap:6px;padding:8px 14px';
-  thinking.innerHTML='<div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out .2s infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:ai-pulse 1.2s ease-in-out .4s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:4px">Thinking…</span>';
-  if(!document.querySelector('style[data-ai-pulse]')) {
-    const s=document.createElement('style');s.setAttribute('data-ai-pulse','1');
-    s.textContent='@keyframes ai-pulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}';
+  thinking.id = 'ai-thinking';
+  thinking.style.cssText='display:flex;align-items:center;gap:6px;padding:10px 14px';
+  thinking.innerHTML='<div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out infinite"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out .2s infinite"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out .4s infinite"></div><span style="font-size:12px;color:var(--text3);margin-left:6px">Thinking…</span>';
+  if(!document.getElementById('aip-style')) {
+    const s=document.createElement('style');s.id='aip-style';
+    s.textContent='@keyframes aip{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}';
     document.head.appendChild(s);
   }
   container.appendChild(thinking);
   container.scrollTop=container.scrollHeight;
-  aiStreaming=true;
-  document.getElementById('ai-send-btn').disabled=true;
 
   try {
     const resp = await fetch('/.netlify/functions/ai', {
@@ -1275,34 +1428,58 @@ async function aiSend() {
         messages: msgs.map(m=>({role:m.role,content:m.content}))
       })
     });
+
+    const thinkEl = document.getElementById('ai-thinking');
+    if(thinkEl) thinkEl.remove();
+
+    const rawText = await resp.text();
+
     if(!resp.ok) {
-      const errText = await resp.text();
-      container.removeChild(thinking);
-      appendAiMessage('assistant', `Error ${resp.status}: ${errText}`);
-      aiStreaming=false; document.getElementById('ai-send-btn').disabled=false;
+      appendAiMessage('assistant', '⚠️ Function error ' + resp.status + ': ' + rawText);
+      aiStreaming=false;
+      document.getElementById('ai-send-btn').disabled=false;
       return;
     }
-    const data = await resp.json();
-    const reply = data.content?data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n'):(data.error?'API Error: '+data.error.message:'Sorry, no response received.');
-    container.removeChild(thinking);
+
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(e) { appendAiMessage('assistant', '⚠️ Could not parse response: ' + rawText); aiStreaming=false; document.getElementById('ai-send-btn').disabled=false; return; }
+
+    if(data.error) {
+      appendAiMessage('assistant', '⚠️ API error: ' + JSON.stringify(data.error));
+      aiStreaming=false; document.getElementById('ai-send-btn').disabled=false; return;
+    }
+
+    const reply = data.content ? data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n') : '⚠️ No content in response: ' + JSON.stringify(data);
     appendAiMessage('assistant', reply);
     msgs.push({role:'assistant', content:reply});
 
-    // Save updated messages + update title if first exchange
+    // Save to Supabase
     const updatePayload = {messages:JSON.stringify(msgs), updated_at:new Date().toISOString()};
     if(msgs.length===2) updatePayload.title = text.slice(0,50)+(text.length>50?'…':'');
     await sb(`ai_chats?id=eq.${currentAiChatId}`, {method:'PATCH', body:JSON.stringify(updatePayload)});
-    // Update local cache
     const chatIdx = aiChats.findIndex(c=>c.id===currentAiChatId);
     if(chatIdx>=0) aiChats[chatIdx].messages = JSON.stringify(msgs);
     await loadAiChats();
     if(updatePayload.title) document.getElementById('ai-chat-name-display').textContent=updatePayload.title;
+
   } catch(e) {
-    if(container.contains(thinking)) container.removeChild(thinking);
-    appendAiMessage('assistant','Network error: '+e.message+'. Check that the Netlify function deployed correctly.');
+    const thinkEl = document.getElementById('ai-thinking');
+    if(thinkEl) thinkEl.remove();
+    appendAiMessage('assistant', '⚠️ Network error: ' + e.message);
   }
+
   aiStreaming=false;
   document.getElementById('ai-send-btn').disabled=false;
+}
+
+// Quick diagnostic — call aiTest() from browser console to check function
+async function aiTest() {
+  try {
+    const r = await fetch('/.netlify/functions/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'You are helpful.',messages:[{role:'user',content:'Say OK'}]})});
+    const t = await r.text();
+    alert('Status: '+r.status+'\nResponse: '+t.slice(0,300));
+  } catch(e) { alert('Fetch failed: '+e.message); }
 }
 
 function aiQuick(prompt) { document.getElementById('ai-input').value=prompt; document.getElementById('ai-input').focus(); }
@@ -1573,6 +1750,360 @@ async function saveEvent() {
   closeModal('modal-event');
   document.getElementById('ev-edit-id').value=''; editingEventId=null;
   await loadTimeline(); renderTimeline();
+}
+
+// ─── CHAPTER EDITOR ──────────────────────────────────────
+let editorChapterId = null;
+
+function openChapterEditor(id) {
+  const c = chapters.find(x=>x.id===id);
+  if(!c) return;
+  editorChapterId = id;
+  document.getElementById('editor-chap-num').textContent = 'Ch. '+c.number;
+  document.getElementById('editor-title').value = c.title||'';
+  document.getElementById('editor-status').value = c.status||'outline';
+  document.getElementById('editor-body').value = c.body||'';
+  document.getElementById('editor-brief-content').textContent = c.notes||'No brief available for this chapter.';
+  editorWordCount();
+  showEditorTab('write');
+  loadVersionHistory(id);
+  const overlay = document.getElementById('chapter-editor-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('editor-body').focus();
+}
+
+function closeChapterEditor() {
+  document.getElementById('chapter-editor-overlay').style.display = 'none';
+  editorChapterId = null;
+}
+
+function showEditorTab(tab) {
+  document.getElementById('editor-brief-panel').style.display = tab==='brief'?'flex':'none';
+  document.getElementById('editor-history-panel').style.display = tab==='history'?'flex':'none';
+  document.getElementById('btn-brief').style.background = tab==='brief'?'var(--accent)':'transparent';
+  document.getElementById('btn-brief').style.color = tab==='brief'?'#fff':'var(--text)';
+  document.getElementById('btn-history').style.background = tab==='history'?'var(--accent)':'transparent';
+  document.getElementById('btn-history').style.color = tab==='history'?'#fff':'var(--text)';
+}
+
+function editorWordCount() {
+  const body = document.getElementById('editor-body').value;
+  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('editor-wc-display').textContent = words.toLocaleString()+' words';
+}
+
+async function saveChapterEditor() {
+  if(!editorChapterId) return;
+  const body = document.getElementById('editor-body').value;
+  const title = document.getElementById('editor-title').value.trim();
+  const status = document.getElementById('editor-status').value;
+  const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
+  await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({body, title, status, word_count, updated_at:new Date().toISOString()})});
+  await loadChapters();
+  renderDashboard();
+  toast('Chapter saved');
+}
+
+// Auto-save every 30 seconds while editor is open
+setInterval(async()=>{
+  if(editorChapterId && document.getElementById('chapter-editor-overlay').style.display==='flex') {
+    await saveChapterEditor();
+  }
+}, 30000);
+
+// ─── VERSION HISTORY ──────────────────────────────────────
+let versions = [];
+
+async function loadVersionHistory(chapterId) {
+  const d = await sb(`chapter_versions?chapter_id=eq.${chapterId}&order=created_at.desc&limit=20`);
+  if(d) versions = d;
+  renderVersionHistory();
+}
+
+function renderVersionHistory() {
+  const el = document.getElementById('editor-history-list');
+  if(!versions.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">No saved versions yet. Click "Save Version" to snapshot the current draft.</div>'; return; }
+  el.innerHTML = versions.map(v=>`
+    <div style="padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:6px;background:var(--bg3);border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">${escHtml(v.label||'Version')}</span>
+        <span style="font-size:10px;color:var(--text3)">${timeAgo(v.created_at)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${(v.word_count||0).toLocaleString()} words</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="previewVersion('${v.id}')" style="font-size:10px;padding:3px 8px">Preview</button>
+        <button class="btn btn-sm" onclick="restoreVersion('${v.id}')" style="font-size:10px;padding:3px 8px;color:var(--amber);border-color:var(--amber)">Restore</button>
+      </div>
+    </div>`).join('');
+}
+
+async function saveVersion() {
+  if(!editorChapterId) return;
+  const body = document.getElementById('editor-body').value;
+  const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
+  const label = prompt('Name this version (e.g. "End of day draft", "Before restructure"):') || 'Version '+new Date().toLocaleString();
+  await sb('chapter_versions', {method:'POST', body:JSON.stringify({chapter_id:editorChapterId, body, word_count, label}), headers:{...h,'Prefer':'return=representation'}});
+  await loadVersionHistory(editorChapterId);
+  toast('Version saved!');
+}
+
+function previewVersion(id) {
+  const v = versions.find(x=>x.id===id);
+  if(!v) return;
+  const w = window.open('','_blank','width=700,height=800');
+  w.document.write(`<html><head><style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;line-height:1.8;font-size:15px;color:#222;padding:20px}</style></head><body><h2>${escHtml(v.label||'Version')}</h2><p style="color:#888;font-size:12px">${new Date(v.created_at).toLocaleString()} · ${(v.word_count||0).toLocaleString()} words</p><hr/><div>${(v.body||'').replace(/\n/g,'<br>')}</div></body></html>`);
+}
+
+async function restoreVersion(id) {
+  if(!confirm('Restore this version? Your current draft will be saved as a new version first.')) return;
+  await saveVersion();
+  const v = versions.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('editor-body').value = v.body||'';
+  editorWordCount();
+  await saveChapterEditor();
+  toast('Version restored!');
+}
+
+// ─── TASKS ────────────────────────────────────────────────
+let tasks = [], editingTaskId = null;
+
+async function loadTasks() {
+  const d = await sb('tasks?order=created_at.desc');
+  if(d===null) { console.warn('tasks table missing'); return; }
+  tasks = d;
+}
+
+function renderTasks() {
+  const cols = {todo:'tasks-todo', progress:'tasks-progress', done:'tasks-done'};
+  Object.values(cols).forEach(id=>{ document.getElementById(id).innerHTML=''; });
+  const byStatus = {todo:[], progress:[], done:[]};
+  tasks.forEach(t=>{ if(byStatus[t.status]) byStatus[t.status].push(t); });
+  Object.entries(byStatus).forEach(([status, list])=>{
+    const el = document.getElementById(cols[status]);
+    if(!list.length){ el.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius-sm)">Empty</div>`; return; }
+    el.innerHTML = list.map(t=>{
+      const auth = authors.find(a=>a.id===t.author_id);
+      const chap = chapters.find(c=>c.id===t.chapter_id);
+      const statusColors = {todo:['#60a5fa','rgba(96,165,250,.1)'], progress:['#fbbf24','rgba(251,191,36,.1)'], done:['#34d399','rgba(52,211,153,.1)']};
+      const [col,bg] = statusColors[t.status]||['var(--text2)','var(--bg3)'];
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditTask('${t.id}')">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px">${escHtml(t.title)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${chap?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Ch. ${chap.number}</span>`:''}
+          ${auth?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${auth.color}22;color:${auth.color}">${escHtml(auth.name)}</span>`:''}
+          ${t.type==='general'?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg3);color:var(--text3)">General</span>`:''}
+        </div>
+        ${t.notes?`<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.4">${escHtml(t.notes.slice(0,80))}${t.notes.length>80?'…':''}</div>`:''}
+      </div>`;
+    }).join('');
+  });
+}
+
+function openAddTask() {
+  editingTaskId=null;
+  document.getElementById('modal-task-title').textContent='Add Task';
+  document.getElementById('task-title').value='';
+  document.getElementById('task-type').value='general';
+  document.getElementById('task-status').value='todo';
+  document.getElementById('task-notes').value='';
+  document.getElementById('task-edit-id').value='';
+  document.getElementById('task-delete-btn').style.display='none';
+  populateTaskChapterSelect();
+  populateTaskAuthorSelect();
+  openModal('modal-task');
+}
+
+function openEditTask(id) {
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  editingTaskId=id;
+  document.getElementById('modal-task-title').textContent='Edit Task';
+  document.getElementById('task-title').value=t.title||'';
+  document.getElementById('task-type').value=t.type||'general';
+  document.getElementById('task-status').value=t.status||'todo';
+  document.getElementById('task-notes').value=t.notes||'';
+  document.getElementById('task-edit-id').value=id;
+  document.getElementById('task-delete-btn').style.display='inline-flex';
+  populateTaskChapterSelect(t.chapter_id);
+  populateTaskAuthorSelect(t.author_id);
+  openModal('modal-task');
+}
+
+function populateTaskChapterSelect(selected='') {
+  const sel = document.getElementById('task-chapter');
+  sel.innerHTML = '<option value="">— None —</option>'+chapters.map(c=>`<option value="${c.id}"${c.id===selected?' selected':''}>${escHtml('Ch. '+c.number+' — '+c.title)}</option>`).join('');
+}
+
+function populateTaskAuthorSelect(selected='') {
+  const sel = document.getElementById('task-author');
+  sel.innerHTML = '<option value="">— Unassigned —</option>'+authors.map(a=>`<option value="${a.id}"${a.id===selected?' selected':''}>${escHtml(a.name)}</option>`).join('');
+}
+
+async function saveTask() {
+  const payload = {
+    title: document.getElementById('task-title').value.trim()||'Untitled',
+    type: document.getElementById('task-type').value,
+    status: document.getElementById('task-status').value,
+    chapter_id: document.getElementById('task-chapter').value||null,
+    author_id: document.getElementById('task-author').value||null,
+    notes: document.getElementById('task-notes').value.trim()
+  };
+  const eid = document.getElementById('task-edit-id').value;
+  if(eid) { await sb(`tasks?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Task updated'); }
+  else { await sb('tasks',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Task added'); logActivity(`Added task: "${payload.title}"`); }
+  closeModal('modal-task');
+  document.getElementById('task-edit-id').value=''; editingTaskId=null;
+  await loadTasks(); renderTasks();
+}
+
+async function deleteTask() {
+  const eid = document.getElementById('task-edit-id').value;
+  if(!eid||!confirm('Delete this task?')) return;
+  await sb(`tasks?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-task');
+  await loadTasks(); renderTasks();
+  toast('Task deleted');
+}
+
+// ─── MILESTONES ───────────────────────────────────────────
+let milestones = [], editingMsId = null;
+
+async function loadMilestones() {
+  const d = await sb('milestones?order=target_date');
+  if(d===null) { console.warn('milestones table missing'); return; }
+  milestones = d;
+}
+
+function renderMilestones() {
+  const el = document.getElementById('milestones-list');
+  const total = milestones.length;
+  const done = milestones.filter(m=>m.status==='complete').length;
+  const upcoming = milestones.filter(m=>m.status==='upcoming'||m.status==='inprogress').sort((a,b)=>new Date(a.target_date)-new Date(b.target_date));
+  document.getElementById('ms-total').textContent = total||'—';
+  document.getElementById('ms-done').textContent = done||'—';
+  document.getElementById('ms-next').textContent = upcoming[0]?new Date(upcoming[0].target_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+
+  if(!milestones.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-flag"></i><p>No milestones yet — add your first writing goal</p></div>'; return; }
+  const statusMeta = {upcoming:{color:'var(--blue)',label:'Upcoming'},inprogress:{color:'var(--amber)',label:'In Progress'},complete:{color:'var(--green)',label:'Complete'},missed:{color:'var(--red)',label:'Missed'}};
+  el.innerHTML = milestones.map(m=>{
+    const meta = statusMeta[m.status]||statusMeta.upcoming;
+    const dateStr = m.target_date?new Date(m.target_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}):'No date set';
+    const daysLeft = m.target_date?Math.ceil((new Date(m.target_date)-new Date())/(1000*60*60*24)):null;
+    const currentWc = chapters.reduce((s,c)=>s+(c.word_count||0),0);
+    const wcPct = m.word_count_goal ? Math.min(100,Math.round(currentWc/m.word_count_goal*100)) : null;
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${meta.color};border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditMilestone('${m.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px">${escHtml(m.title)}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text3)"><i class="fas fa-calendar" style="margin-right:4px"></i>${dateStr}</span>
+            ${daysLeft!==null&&m.status!=='complete'?`<span style="font-size:11px;color:${daysLeft<0?'var(--red)':daysLeft<14?'var(--amber)':'var(--text3)'}">${daysLeft<0?Math.abs(daysLeft)+' days overdue':daysLeft+' days left'}</span>`:''}
+          </div>
+          ${m.notes?`<div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.4">${escHtml(m.notes)}</div>`:''}
+          ${wcPct!==null?`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>Word count progress</span><span>${currentWc.toLocaleString()} / ${(m.word_count_goal).toLocaleString()}</span></div><div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden"><div style="height:100%;background:${meta.color};width:${wcPct}%;border-radius:2px"></div></div></div>`:''}
+        </div>
+        <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${meta.color}22;color:${meta.color};white-space:nowrap;font-weight:500">${meta.label}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddMilestone() {
+  editingMsId=null;
+  document.getElementById('modal-ms-title').textContent='Add Milestone';
+  ['ms-title','ms-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ms-date').value='';
+  document.getElementById('ms-wc').value='';
+  document.getElementById('ms-status').value='upcoming';
+  document.getElementById('ms-edit-id').value='';
+  document.getElementById('ms-delete-btn').style.display='none';
+  openModal('modal-milestone');
+}
+
+function openEditMilestone(id) {
+  const m = milestones.find(x=>x.id===id);
+  if(!m) return;
+  editingMsId=id;
+  document.getElementById('modal-ms-title').textContent='Edit Milestone';
+  document.getElementById('ms-title').value=m.title||'';
+  document.getElementById('ms-date').value=m.target_date||'';
+  document.getElementById('ms-wc').value=m.word_count_goal||'';
+  document.getElementById('ms-notes').value=m.notes||'';
+  document.getElementById('ms-status').value=m.status||'upcoming';
+  document.getElementById('ms-edit-id').value=id;
+  document.getElementById('ms-delete-btn').style.display='inline-flex';
+  openModal('modal-milestone');
+}
+
+async function saveMilestone() {
+  const payload={title:document.getElementById('ms-title').value.trim()||'Untitled',target_date:document.getElementById('ms-date').value||null,word_count_goal:parseInt(document.getElementById('ms-wc').value)||null,notes:document.getElementById('ms-notes').value.trim(),status:document.getElementById('ms-status').value};
+  const eid=document.getElementById('ms-edit-id').value;
+  if(eid){ await sb(`milestones?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Milestone updated'); }
+  else { await sb('milestones',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Milestone added'); }
+  closeModal('modal-milestone');
+  document.getElementById('ms-edit-id').value=''; editingMsId=null;
+  await loadMilestones(); renderMilestones();
+}
+
+async function deleteMilestone() {
+  const eid=document.getElementById('ms-edit-id').value;
+  if(!eid||!confirm('Delete this milestone?')) return;
+  await sb(`milestones?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-milestone');
+  await loadMilestones(); renderMilestones();
+  toast('Milestone deleted');
+}
+
+// ─── CHAPTER SEED ─────────────────────────────────────────
+const CHAPTER_SEED = [
+  {number:1,title:'In The Frame',status:'outline',word_count:0,pov:'Eli',part:'1',notes:"Eli at work — warm, funny, in control of every frame except his own. Establish the filmmaking lens. Introduce Natalie as present, warm, real. The reader should fall for Eli completely before the ground shifts.\n\nMOTIF: Porch light first appearance — Eli gives a directing note about a character hesitating in a doorway.\n\nVOICE: Part One — composed, cinematic, in control. The reader admires the voice before they realize it's armor."},
+  {number:2,title:'The Conversation',status:'outline',word_count:0,notes:"Natalie receives the opportunity. No villain. Two adults quietly approaching a fracture. Eli has a feeling he can't identify and files it under 'processing.'\n\nMOTIF: Curated image — everything warm and right and slightly arranged.\nMOTIF: Unfinished film first mention.\n\nANONYMOUS ENTRY 1 follows (Natalie, Never Sent)."},
+  {number:3,title:'The Choice',status:'outline',word_count:0,notes:"Eli realizes he could follow Natalie. Chooses not to — loves her enough to lose her cleanly rather than slowly. Neither tells the other the full truth. That gap is the emotional foundation.\n\nKEY: He chose to lose her cleanly. This is not cowardice. It is the most complete act of love he's ever managed.\n\nMOTIF: Her apartment has a lamp she leaves on. She doesn't mention why."},
+  {number:4,title:'The Night Of',status:'outline',word_count:0,notes:"ALMOST MOMENT 01 — Grace arrives with the emergency kit. Nobody called her. Takeout, six-pack, microwave popcorn, two candy bars. The movie neither of them watches. Her head on his shoulder by 2am. A thought surfaces — not a sentence, not even fully formed. Filed under exhaustion.\n\nFLAVOR: Unnamed. He experiences comfort. The reader experiences recognition."},
+  {number:5,title:'The Airport',status:'outline',word_count:0,notes:"ALMOST MOMENT 02 — The drive takes forty-three minutes. Forty-two of them pretending it's a normal day. The goodbye that becomes something else. Her hands still on his arms. 'Bye.' Not goodbye.\n\nFLAVOR: The most loaded non-kiss in the book. A love scene disguised as a farewell.\n\nKEY: He could have said something. The reason he didn't is more complicated than fear."},
+  {number:6,title:'The Story He Tells Himself',status:'outline',word_count:0,notes:"Eli quietly concludes: love doesn't work out for me. Not like the movies. He calls it maturity. He calls it realism.\n\nTHIS IS THE LIE THAT DRIVES THE NOVEL. Fear disguised as wisdom. The false belief is now fully installed."},
+  {number:7,title:'The New Cut',status:'outline',word_count:0,notes:"Life after Natalie. Career solid. Life functional. He is not sad. He is settled. Settled is harder to see through than sad.\n\nANONYMOUS ENTRY 2 follows (Grace, Draft Unsaved — 'started writing this as a list of reasons why familiarity isn't the same as love / got four items in / then he called')."},
+  {number:8,title:'Grace, As Always',status:'outline',word_count:0,notes:"Coffee. Calls. Consistency. Presence. Not romance. Constancy. She leaves coffee. She always leaves coffee. He has never once thought about what it means to leave coffee.\n\nMOTIF: Porch light — she appears in his doorway. He didn't buzz her up.\n\nVOICE: His sentences about Grace are shorter than sentences about other women. The compression is unconscious."},
+  {number:9,title:'Lucy',status:'outline',word_count:0,notes:"ALMOST MOMENT 04 — The meeting. Wrong place, perfect timing. She asks the question nobody asks. He answers before he decides to. He asks for her number — something he never does.\n\nMOTIF: New city — he drives home through streets he's driven a thousand times and they feel slightly different."},
+  {number:10,title:'The First Conversation',status:'outline',word_count:0,notes:"Hours disappear. He cannot remember the last time he talked to someone like that.\n\nANONYMOUS ENTRY 3 follows (Lucy, Deleted Recording).\nMOTIF: Unfinished film — he opens the script after. Reads three pages. Closes it. Something feels wrong."},
+  {number:11,title:'The Drive Home',status:'outline',word_count:0,notes:"ALMOST MOMENT 05 — The specific silence. Windows down despite the cold. He isn't replaying the conversation. He's replaying the silence.\n\nFLAVOR: No confession. No touch. Two people delaying goodbye and finding reasons to keep smiling after they've already said it."},
+  {number:12,title:'The Kitchen',status:'outline',word_count:0,notes:"ALMOST MOMENT 06 — Lucy's apartment. Lived in, not curated. Work and waiting aren't the same thing. Eli goes completely still. Like something that had been running for years just stopped.\n\nKEY LINE (Lucy): 'I think most people stay too long. Work and waiting aren't the same thing.'\n\nFLAVOR: The almost moment isn't attraction. It's peace."},
+  {number:13,title:'The First Disappearance',status:'outline',word_count:0,notes:"ALMOST MOMENT 07 — Lucy pulls away. Eli ends up in Grace's kitchen. Grace asks: 'Why does it matter so much?' He has no answer. He never stops to wonder why she's the person who asked it.\n\nMOTIF: Porch light — Grace stands outside his building after. Doesn't go up.\n\nANONYMOUS ENTRY 4 follows (Natalie, Never Sent)."},
+  {number:14,title:'The Hallway',status:'outline',word_count:0,notes:"ALMOST MOMENT 10 — Lucy's hand on his chest. His heartbeat faster than either expected. Expression: recognition, not surprise. The tension dissolves into a monster joke.\n\nFLAVOR: Three seconds. Her hand on his chest. His heart."},
+  {number:15,title:'The Wedding',status:'outline',word_count:0,notes:"ALMOST MOMENT 08 — Eli and Grace arrive together. The dance. His hand more deliberate. Three people at separate tables notice. The simultaneous no/nope.\n\nMOTIF: Porch light — warm amber light near her. He doesn't know why he noticed."},
+  {number:16,title:'Ryan, Briefly',status:'outline',word_count:0,notes:"Grace casually mentions Ryan. Eli files it under 'good for her.' Doesn't examine the pause before he filed it.\n\nMOTIF: Unfinished film — she's read pages. He always gives her pages. She has notes she hasn't sent yet."},
+  {number:17,title:'The Accidental Call',status:'outline',word_count:0,notes:"ALMOST MOMENT 03 — Natalie pocket-dials him. Two hours disappear. The easy rhythm returns. Neither calls back.\n\nFLAVOR: No flirting. No confessions. Nothing happens. Which is exactly why it feels so dangerous.\n\nANONYMOUS ENTRY 5 follows (Lucy, Deleted Recording)."},
+  {number:18,title:'Wrong Apartment',status:'outline',word_count:0,notes:"NATALIE'S POV CHAPTER — She accidentally drives to the old apartment. The list — she got almost everything on it. Should feel victorious. It doesn't.\n\nREALIZATION: She doesn't miss the relationship. She misses him.\n\nENDING: She almost calls him. Drives away instead. The apartment disappears in her rearview. The feeling doesn't.\n\nVOICE: Polished, slightly composed. Never Sent format internally."},
+  {number:19,title:'The Missed Call',status:'outline',word_count:0,notes:"ALMOST MOMENT 11 — He calls Grace at 11:47pm. She doesn't answer. 2:13am: 'Sorry. Was out. Ryan.' For the first time in twenty years he needed her and she was somewhere else.\n\nFEELING: Not jealousy. Displacement. Something smaller. Harder to identify."},
+  {number:20,title:"Lucy's Chapter — Growth",status:'outline',word_count:0,notes:"LUCY'S POV CHAPTER — She realizes Eli talks about Grace differently. Not the way men talk about women they want. The way people talk about somewhere they've always felt safe.\n\nREALIZATION: She steps back not because she lost — but because she understood. Most emotionally mature thing anyone does in the book.\n\nANONYMOUS ENTRY 6 follows (Grace, Draft Unsaved)."},
+  {number:21,title:'The Window',status:'outline',word_count:0,notes:"ALMOST MOMENT 09 — THE FIRST WINDOW. Alone. Late. One of them almost says the true thing — 'Do you ever think about—' and pulls back. HE LETS HER NOT FINISH IT.\n\nTHAT'S THE WINDOW: Not the honest thing almost said. The deliberate choice not to hear it.\n\nTHE READER WANTS TO SCREAM."},
+  {number:22,title:'Future Tense',status:'outline',word_count:0,notes:"Eli begins imagining different futures. Something has shifted in him without announcement. He doesn't name what shifted.\n\nVOICE: Part Three — commentary starts cracking. Sentences break apart mid-thought."},
+  {number:23,title:'The Conversation',status:'outline',word_count:0,notes:"ALMOST MOMENT 12 — Coffee with Natalie. Tuesday. 'I missed you.' Not romantic. Just true. He realizes if she'd come back sooner he would have really listened.\n\nANONYMOUS ENTRY 7 follows (Natalie, Never Sent — 'It wasn't the life. It was you.')."},
+  {number:24,title:'The Overlap',status:'outline',word_count:0,notes:"ALMOST MOMENT 13 — The film premiere. Grace beside him. Natalie texting. Lucy across the room. Past. Growth. Presence. All at once. For the first time he wonders if he's been asking the wrong question."},
+  {number:25,title:'Wrong Person',status:'outline',word_count:0,notes:"ALMOST MOMENT 14 — Ryan is good. Funny. Thoughtful. Confident without trying. Why did seeing her with the right person feel like seeing her with the wrong one?\n\nKEY: When Ryan leaves, the old rhythm returns immediately. Like a song. Nobody notices except Eli."},
+  {number:26,title:'The Life She Could Choose',status:'outline',word_count:0,notes:"Grace genuinely considers Ryan. Not a placeholder. A real future. Eli watches this without fully understanding what he's watching.\n\nANONYMOUS ENTRY 8 follows (Lucy, Deleted Recording — 'am I protecting my peace, or just protecting my heart?')."},
+  {number:27,title:"Grace's Chapter — Staying",status:'outline',word_count:0,notes:"GRACE'S POV CHAPTER — She does the math on the windows. Twenty years. Never both available at the same time. Not once.\n\nShe built her entire life around the assumption that Eli was not an option — and that assumption was so old she stopped examining it.\n\nVOICE REQUIREMENTS: One chapter. Full weight. No distribution. Humor does double work — breathing room AND defense. She never describes him physically. That absence is the loudest thing in her chapter."},
+  {number:28,title:'The Story He Keeps Telling',status:'outline',word_count:0,notes:"ALMOST MOMENT 15 — The screenplay protagonist isn't searching for someone who makes him feel one thing. He's searching for someone who makes all of those things feel like they belong together.\n\nHe stops typing. 'Because that isn't the screenplay. Or at least it isn't only the screenplay.'\n\nMOTIF: Unfinished film reaching critical point."},
+  {number:29,title:'The Last Window',status:'outline',word_count:0,notes:"THE LAST WINDOW — The pause is longer. The goodbye is harder. Both feel the cost of stepping through. Neither steps.\n\nCRITICAL: Not missed because they don't understand. Missed because they do. The first window was innocent. This one is a choice."},
+  {number:30,title:'Grace and Ryan',status:'outline',word_count:0,notes:"Ryan asks Grace something simple: if he asked, what would you do? Grace doesn't answer immediately. The pause is everything.\n\nEli only hears about this conversation secondhand — and the incomplete version is somehow more devastating.\n\nANONYMOUS ENTRY 9 follows (Grace, Draft Unsaved — 'twenty years. i've been doing this math for twenty years without knowing i was doing it')."},
+  {number:31,title:'The Arithmetic of Almost',status:'outline',word_count:0,notes:"ALMOST MOMENT 15 COMPLETING — Eli finally starts adding. The couch. The wedding. The missed call. The airport. The hallway. The coffee. The windows.\n\nKEY SHIFT: He stops asking WHO. He asks WHAT.\n\nMOTIF: Coffee — Grace left coffee. He is finally understanding what that meant."},
+  {number:32,title:'The Last Ordinary Day',status:'outline',word_count:0,notes:"'Nothing had changed. The only thing that was different was me. Which turned out to be enough.'\n\nTHIS IS NOT THE DAY HE CHOOSES. This is the day he becomes capable of choosing.\n\nMOTIF: Unfinished film — he closes the script for what feels final."},
+  {number:33,title:'What Love Means',status:'outline',word_count:0,notes:"THE BREAKTHROUGH:\n\nNatalie taught him LETTING GO.\nLucy taught him GROWTH.\nGrace taught him STAYING.\n\nThese are not competing ideas. They are components.\n\nHe picks up his phone.\n\nVOICE: Part Four — pure presence. Quieter and more certain simultaneously."},
+  {number:34,title:'Final Entry',status:'outline',word_count:0,notes:"ENTRY 9 ELEVATED TO CHAPTER STATUS — The anonymous voice steps forward.\n\nKEY: 'Love is who you reach for before you've decided to.'\n\nFINAL LINE: 'Maybe I knew. Maybe I just needed a different word for it.'\n\nThe voice steps back. What happens next belongs to Chapter 35."},
+  {number:35,title:'On My Way To You',status:'outline',word_count:0,notes:"THE DRIVE — Three texts:\n'Are you busy right now?'\n'No, what's up?'\n'On my way to you.'\n\nThe title becomes dialogue. No detours. The city at night one last time.\n\nVOICE: Most stripped-back his voice gets. He's stopped looking for the film this is. He's just in it."},
+  {number:36,title:'The Door',status:'outline',word_count:0,notes:"THE ENDING:\n\nA knock.\nA pause.\nThe door opens.\nFor a moment neither of them speaks.\nThen she smiles.\nEnd.\n\nEVERY MOTIF ARRIVES SIMULTANEOUSLY:\n1. Porch light — he sees light under her door\n2. Late night drive — ends here\n3. Silence — four feet of space\n4. Unfinished film — gone. He's in the scene.\n5. Coffee — not present. But the reader remembers.\n\nTHE ENDING IS AMBIGUOUS. The reader does not know whose door opens."}
+];
+
+async function seedChaptersFromSpine() {
+  toast('Loading all 36 chapters from story spine…');
+  for(const c of CHAPTER_SEED) {
+    await sb('chapters', {method:'POST', body:JSON.stringify(c), headers:{...h,'Prefer':'return=representation'}});
+  }
+  await loadChapters();
+  renderChapters();
+  renderDashboard();
+  toast('All 36 chapters loaded!');
 }
 
 // ─── BOOT ─────────────────────────────────────────────────
