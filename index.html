@@ -178,6 +178,54 @@ select.form-input option{background:var(--bg2)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
 .empty-state i{font-size:32px;margin-bottom:10px;display:block;color:var(--text3)}
 .empty-state p{font-size:13px}
+
+/* ── MOBILE ─────────────────────────────────────────────── */
+@media (max-width:768px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;min-width:0;height:auto;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);overflow:visible;order:2;flex-shrink:0}
+  .sidebar-header{display:none}
+  .authors-box{display:none}
+  .nav{display:flex;flex-direction:row;overflow-x:auto;padding:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-top:1px solid var(--border)}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-section{display:none}
+  .nav-item{flex-direction:column;gap:3px;padding:8px 10px;font-size:9px;border-left:none;border-top:2px solid transparent;white-space:nowrap;min-width:52px;justify-content:center;align-items:center;flex-shrink:0}
+  .nav-item i{width:auto;font-size:15px}
+  .nav-item.active{border-left:none;border-top:2px solid var(--accent);background:var(--accent-glow)}
+  .main{order:1;flex:1;min-height:0;overflow:hidden}
+  .topbar{padding:10px 12px}
+  .page-title{font-size:14px}
+  .content{padding:12px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .stat-val{font-size:20px}
+  .stat-card{padding:12px}
+  .ideas-grid{grid-template-columns:1fr 1fr}
+  .modal{width:95vw!important;max-height:88vh;border-radius:16px 16px 0 0!important}
+  .modal-bg{align-items:flex-end;padding:0}
+  #editor-body{padding:14px;font-size:14px;line-height:1.75}
+  #editor-title{font-size:13px}
+  #editor-notes-panel,#editor-brief-panel,#editor-history-panel,#editor-drift-panel,#editor-entry-panel{width:100%!important;position:absolute;bottom:0;left:0;right:0;height:55vh;border-left:none!important;border-top:1px solid var(--border);z-index:20}
+  #tab-ai>div{flex-direction:column}
+  #tab-ai>div>div:first-child{width:100%!important;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--border)}
+  #ai-chat-list{display:flex;flex-direction:row;overflow-x:auto;padding:6px;gap:6px;max-height:none!important;flex-wrap:nowrap}
+  #ai-messages{min-height:180px}
+  #search-overlay{padding-top:16px}
+  #search-overlay>div{width:95vw}
+  .toast{bottom:70px;right:12px;left:12px;max-width:none;text-align:center}
+  #tab-tasks>div:first-child{flex-direction:column}
+  .chapter-card{padding:10px 12px}
+  .doc-upload-zone{padding:16px}
+  #read-mode-overlay>div:first-child{flex-wrap:wrap;gap:5px;padding:8px 10px}
+  #read-mode-overlay>div:first-child select{font-size:10px;padding:2px 4px}
+  #read-mode-body{padding:20px 12px}
+}
+@media (max-width:480px){
+  .ideas-grid{grid-template-columns:1fr}
+  .nav-item{padding:6px 8px;min-width:44px;font-size:8px}
+  .nav-item i{font-size:14px}
+  .content{padding:8px}
+  .btn{padding:6px 10px;font-size:12px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:6px}
+}
 </style>
 </head>
 <body>
@@ -208,6 +256,8 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-section">Tools</div>
       <div class="nav-item" onclick="openSearch()"><i class="fas fa-search"></i>Search</div>
       <div class="nav-item" onclick="showTab('sessions',this)"><i class="fas fa-pen-nib"></i>Sessions</div>
+      <div class="nav-item" onclick="openReadMode()"><i class="fas fa-book-reader"></i>Read Mode</div>
+      <div class="nav-item" onclick="openExportModal()"><i class="fas fa-file-export"></i>Export</div>
     </div>
     <div class="authors-box">
       <div class="authors-label">Co-Authors</div>
@@ -278,38 +328,68 @@ select.form-input option{background:var(--bg2)}
       <!-- MEET -->
       <div id="tab-meet" class="tab">
         <div style="max-width:720px;margin:0 auto">
-          <div class="card" style="margin-bottom:16px;text-align:center;padding:28px 20px">
-            <i class="fas fa-video" style="font-size:36px;color:var(--accent);margin-bottom:12px;display:block"></i>
-            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Start a Video Meeting</div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto">Your private room is always waiting — no accounts, no installs. Share the room name with your co-author and you're both in.</div>
-            <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap">
-              <div style="display:flex;align-items:center;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden">
-                <span style="padding:8px 12px;font-size:13px;color:var(--text3);border-right:1px solid var(--border2);white-space:nowrap">meet.jit.si/</span>
-                <input id="room-name" class="form-input" style="border:none;border-radius:0;width:200px;background:transparent" placeholder="on-my-way-to-you" value="on-my-way-to-you"/>
+
+          <!-- Option selector -->
+          <div class="card" style="margin-bottom:14px;padding:16px">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Choose your meeting tool</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="setMeetMode('whereby')" id="meet-btn-whereby" class="btn btn-primary" style="font-size:12px"><i class="fas fa-video"></i> Whereby (embedded)</button>
+              <button onclick="setMeetMode('googlemeet')" id="meet-btn-googlemeet" class="btn" style="font-size:12px"><i class="fab fa-google"></i> Google Meet</button>
+              <button onclick="setMeetMode('facetime')" id="meet-btn-facetime" class="btn" style="font-size:12px"><i class="fas fa-mobile-alt"></i> FaceTime / Phone</button>
+            </div>
+          </div>
+
+          <!-- WHEREBY -->
+          <div id="meet-whereby" style="display:block">
+            <div class="card" style="margin-bottom:14px;padding:20px;text-align:center">
+              <i class="fas fa-video" style="font-size:28px;color:var(--accent);margin-bottom:10px;display:block"></i>
+              <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Whereby — Free Video Rooms</div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:16px;max-width:380px;margin-left:auto;margin-right:auto">Free, no download, guests join with one click — no account needed for your co-author. You create the room once, it's always there.</div>
+              <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px">
+                <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center">
+                  <span style="padding:8px 10px;font-size:12px;color:var(--text3);border-right:1px solid var(--border2);white-space:nowrap">whereby.com/</span>
+                  <input id="whereby-room" class="form-input" style="border:none;border-radius:0;width:180px;background:transparent;font-size:13px" placeholder="on-my-way-to-you" value="on-my-way-to-you"/>
+                </div>
+                <button class="btn btn-primary" onclick="launchWhereby()"><i class="fas fa-video"></i> Join Room</button>
+                <button class="btn" onclick="copyWherebyLink()"><i class="fas fa-copy"></i> Copy Link</button>
+                <button class="btn" onclick="postWherebyToDiscussion()"><i class="fas fa-paper-plane"></i> Post to Discussion</button>
               </div>
-              <button class="btn btn-primary" onclick="launchMeet()"><i class="fas fa-video"></i> Join Room</button>
-              <button class="btn" onclick="copyRoomLink()"><i class="fas fa-copy"></i> Copy Link</button>
-              <button class="btn" onclick="postMeetToDiscussion()"><i class="fas fa-paper-plane"></i> Post to Discussion</button>
+              <div style="font-size:11px;color:var(--text3)">First time? <a href="https://whereby.com/user/signup" target="_blank" style="color:var(--accent)">Create a free Whereby account</a> to own your room name.</div>
+            </div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <div id="whereby-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;background:var(--bg3);gap:12px">
+                <i class="fas fa-video" style="font-size:40px;color:var(--text3)"></i>
+                <div style="font-size:13px;color:var(--text3)">Click "Join Room" to start your meeting here</div>
+                <div style="font-size:11px;color:var(--text3);max-width:320px;text-align:center">Whereby embeds directly in the hub — your co-author joins from their own browser, no install needed</div>
+              </div>
+              <iframe id="whereby-frame" style="display:none;width:100%;height:520px;border:none" allow="camera; microphone; fullscreen; display-capture; autoplay; speaker-selection"></iframe>
             </div>
           </div>
 
-          <div class="card" style="padding:0;overflow:hidden">
-            <div id="jitsi-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:420px;background:var(--bg3);gap:14px">
-              <i class="fas fa-video" style="font-size:48px;color:var(--text3)"></i>
-              <div style="font-size:13px;color:var(--text3)">Click "Join Room" to start your meeting here</div>
+          <!-- GOOGLE MEET -->
+          <div id="meet-googlemeet" style="display:none">
+            <div class="card" style="padding:24px;text-align:center">
+              <i class="fab fa-google" style="font-size:32px;color:#34a853;margin-bottom:12px;display:block"></i>
+              <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Google Meet</div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto">Google Meet can't be embedded in pages, but you can launch it instantly and share the link with your co-author through Discussion.</div>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="btn btn-primary" onclick="launchGoogleMeet()"><i class="fab fa-google"></i> Start New Meeting</button>
+                <button class="btn" onclick="postGoogleMeetToDiscussion()"><i class="fas fa-paper-plane"></i> Post Link to Discussion</button>
+              </div>
+              <div style="margin-top:16px;font-size:11px;color:var(--text3)">Opens in a new tab · Both of you need a Google account</div>
             </div>
-            <iframe id="jitsi-frame" style="display:none;width:100%;height:520px;border:none" allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
           </div>
 
-          <div class="card" style="margin-top:12px">
-            <div class="section-heading" style="margin-bottom:10px">Tips</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-lock" style="color:var(--accent);margin-right:6px"></i>Your room is private — only people with the exact name can join</div>
-              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-share-alt" style="color:var(--accent);margin-right:6px"></i>Use "Post to Discussion" to send the link to your co-author instantly</div>
-              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-user" style="color:var(--accent);margin-right:6px"></i>No account needed — just open the link and go</div>
-              <div style="font-size:12px;color:var(--text2)"><i class="fas fa-pencil-alt" style="color:var(--accent);margin-right:6px"></i>Rename the room anything you like — make it unique for extra privacy</div>
+          <!-- FACETIME / PHONE -->
+          <div id="meet-facetime" style="display:none">
+            <div class="card" style="padding:24px;text-align:center">
+              <i class="fas fa-mobile-alt" style="font-size:32px;color:var(--accent);margin-bottom:12px;display:block"></i>
+              <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">FaceTime or Phone Call</div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto">Sometimes the best tool is the one in your pocket. Post a heads-up to Discussion and call your co-author directly.</div>
+              <button class="btn btn-primary" onclick="postCallToDiscussion()"><i class="fas fa-paper-plane"></i> Post "Let's jump on a call" to Discussion</button>
             </div>
           </div>
+
         </div>
       </div>
       <div id="tab-discuss" class="tab">
@@ -583,6 +663,7 @@ select.form-input option{background:var(--bg2)}
     </select>
     <div style="font-size:12px;color:var(--text3);white-space:nowrap" id="editor-wc-display">0 words</div>
     <button class="btn btn-primary btn-sm" onclick="saveChapterEditor()" title="Save"><i class="fas fa-save"></i></button>
+    <button class="btn btn-sm btn-danger" onclick="deleteChapter()" title="Delete chapter" style="padding:5px 8px"><i class="fas fa-trash"></i></button>
     <div style="width:1px;height:20px;background:var(--border)"></div>
     <button class="btn btn-sm" onclick="toggleReadAloud()" id="btn-readaloud" title="Read aloud"><i class="fas fa-volume-up"></i></button>
     <button class="btn btn-sm" onclick="showEditorTab('drift')" id="btn-drift" title="Voice drift check" style="font-size:11px"><i class="fas fa-spell-check"></i> Drift</button>
@@ -761,6 +842,93 @@ select.form-input option{background:var(--bg2)}
       <button class="btn" onclick="closeModal('modal-session')">Cancel</button>
       <button class="btn btn-danger" id="sess-delete-btn" onclick="deleteSession()" style="display:none">Delete</button>
       <button class="btn btn-primary" onclick="saveSession()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- READ MODE OVERLAY -->
+<div id="read-mode-overlay" style="display:none;position:fixed;inset:0;background:#111;z-index:500;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 20px;background:#111;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
+    <button class="btn btn-sm" onclick="closeReadMode()"><i class="fas fa-arrow-left"></i> Back</button>
+    <div style="flex:1;text-align:center">
+      <span id="read-mode-title" style="font-size:13px;color:#888;font-style:italic">On My Way To You</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:11px;color:#666">Font</label>
+      <select id="read-font" onchange="updateReadStyle()" style="background:#1a1a1a;border:1px solid #333;color:#aaa;font-size:11px;padding:3px 6px;border-radius:4px">
+        <option value="Georgia,serif">Georgia</option>
+        <option value="'Times New Roman',serif">Times New Roman</option>
+        <option value="-apple-system,sans-serif">Sans-serif</option>
+      </select>
+      <label style="font-size:11px;color:#666">Size</label>
+      <select id="read-size" onchange="updateReadStyle()" style="background:#1a1a1a;border:1px solid #333;color:#aaa;font-size:11px;padding:3px 6px;border-radius:4px">
+        <option value="15">15px</option>
+        <option value="16" selected>16px</option>
+        <option value="18">18px</option>
+        <option value="20">20px</option>
+      </select>
+      <label style="font-size:11px;color:#666">Width</label>
+      <select id="read-width" onchange="updateReadStyle()" style="background:#1a1a1a;border:1px solid #333;color:#aaa;font-size:11px;padding:3px 6px;border-radius:4px">
+        <option value="560">Narrow</option>
+        <option value="680" selected>Medium</option>
+        <option value="820">Wide</option>
+      </select>
+    </div>
+    <div id="read-progress" style="font-size:11px;color:#555;white-space:nowrap"></div>
+  </div>
+  <div id="read-mode-body" style="flex:1;overflow-y:auto;padding:60px 20px" onscroll="updateReadProgress()">
+    <div id="read-mode-content" style="max-width:680px;margin:0 auto;color:#ddd;line-height:1.9;font-size:16px;font-family:Georgia,serif"></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;background:#111;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0">
+    <button class="btn btn-sm" onclick="readModePrev()" id="read-prev"><i class="fas fa-chevron-left"></i> Previous</button>
+    <span id="read-chapter-indicator" style="font-size:12px;color:#666"></span>
+    <button class="btn btn-sm" onclick="readModeNext()" id="read-next">Next <i class="fas fa-chevron-right"></i></button>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-bg" id="modal-export">
+  <div class="modal" style="width:480px">
+    <div class="modal-title"><i class="fas fa-file-export" style="margin-right:8px;color:var(--accent)"></i>Export Manuscript</div>
+    <div class="form-group">
+      <label class="form-label">Title Page</label>
+      <input class="form-input" id="export-title" value="On My Way To You" placeholder="Novel title"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Author(s)</label>
+      <input class="form-input" id="export-authors" placeholder="e.g. Brandon Noble & Co-Author Name"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Include Chapters</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="export-chapter-select">
+        <button class="btn btn-sm" onclick="exportSelectAll()" style="font-size:11px">Select All</button>
+        <button class="btn btn-sm" onclick="exportSelectNone()" style="font-size:11px">Clear</button>
+        <button class="btn btn-sm" onclick="exportSelectWritten()" style="font-size:11px">Written Only</button>
+      </div>
+      <div id="export-chapter-list" style="margin-top:8px;max-height:180px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Format</label>
+      <select class="form-input" id="export-format">
+        <option value="txt">Plain Text (.txt)</option>
+        <option value="html">Formatted HTML</option>
+        <option value="md">Markdown (.md)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Include</label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer"><input type="checkbox" id="export-inc-brief" style="accent-color:var(--accent)"/> Chapter briefs (writing notes)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer"><input type="checkbox" id="export-inc-wc" checked style="accent-color:var(--accent)"/> Word count per chapter</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer"><input type="checkbox" id="export-inc-pov" checked style="accent-color:var(--accent)"/> POV label per chapter</label>
+      </div>
+    </div>
+    <div style="padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);margin-bottom:4px">
+      <div style="font-size:12px;color:var(--text2)" id="export-summary">Select chapters to see word count</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-export')">Cancel</button>
+      <button class="btn btn-primary" onclick="runExport()"><i class="fas fa-download"></i> Download</button>
     </div>
   </div>
 </div>
@@ -1297,36 +1465,74 @@ function timeAgo(iso){
 }
 
 // ─── MEET ─────────────────────────────────────────────────
-function getRoomName() {
-  return (document.getElementById('room-name').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+let currentMeetMode = 'whereby';
+
+function setMeetMode(mode) {
+  currentMeetMode = mode;
+  ['whereby','googlemeet','facetime'].forEach(m => {
+    document.getElementById('meet-'+m).style.display = m===mode?'block':'none';
+    const btn = document.getElementById('meet-btn-'+m);
+    if(btn) { btn.className = m===mode?'btn btn-primary':'btn'; btn.style.fontSize='12px'; }
+  });
 }
 
-function launchMeet() {
-  const room = getRoomName();
-  const frame = document.getElementById('jitsi-frame');
-  const placeholder = document.getElementById('jitsi-placeholder');
+// WHEREBY
+function launchWhereby() {
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const frame = document.getElementById('whereby-frame');
+  const placeholder = document.getElementById('whereby-placeholder');
   placeholder.style.display = 'none';
   frame.style.display = 'block';
-  frame.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
-  toast('Joining room: ' + room);
+  frame.src = `https://whereby.com/${encodeURIComponent(room)}?embed&skipMediaPermissionPrompt`;
+  toast('Opening room: whereby.com/'+room);
 }
 
-function copyRoomLink() {
-  const room = getRoomName();
-  const url = `https://meet.jit.si/${encodeURIComponent(room)}`;
+function copyWherebyLink() {
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const url = `https://whereby.com/${encodeURIComponent(room)}`;
   navigator.clipboard.writeText(url).then(()=>toast('Room link copied!')).catch(()=>toast('Link: '+url));
 }
 
-async function postMeetToDiscussion() {
+async function postWherebyToDiscussion() {
   if(!currentAuthorId){ toast('Select an author first'); return; }
-  const room = getRoomName();
-  const url = `https://meet.jit.si/${encodeURIComponent(room)}`;
-  const content = `📹 I've started a video meeting! Join here:\n${url}`;
-  await sb('discussion', {method:'POST', body:JSON.stringify({content, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
-  logActivity('Started a video meeting');
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const url = `https://whereby.com/${encodeURIComponent(room)}`;
+  const content = `📹 Join me for a video call!\n${url}\n\nNo download needed — just click the link.`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentAuthorId}),headers:{...h,'Prefer':'return=representation'}});
+  logActivity('Posted a video meeting link');
   toast('Meeting link posted to Discussion!');
   await loadDiscussion();
 }
+
+// GOOGLE MEET
+function launchGoogleMeet() {
+  window.open('https://meet.google.com/new','_blank');
+  toast('Google Meet opened — copy the link and share it!');
+}
+
+async function postGoogleMeetToDiscussion() {
+  if(!currentAuthorId){ toast('Select an author first'); return; }
+  const content = `📹 Starting a Google Meet call — I'll paste the link here once it's created. Give me 30 seconds!`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentAuthorId}),headers:{...h,'Prefer':'return=representation'}});
+  window.open('https://meet.google.com/new','_blank');
+  toast('Opening Google Meet — paste the link in Discussion!');
+  await loadDiscussion();
+}
+
+// PHONE / FACETIME
+async function postCallToDiscussion() {
+  if(!currentAuthorId){ toast('Select an author first'); return; }
+  const content = `📞 Hey — let's jump on a call when you're free!`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentAuthorId}),headers:{...h,'Prefer':'return=representation'}});
+  toast('Message posted to Discussion!');
+  await loadDiscussion();
+}
+
+// Keep old function names as aliases so nothing breaks
+function launchMeet() { launchWhereby(); }
+function copyRoomLink() { copyWherebyLink(); }
+async function postMeetToDiscussion() { await postWherebyToDiscussion(); }
+
 
 // ─── AI ASSISTANT ────────────────────────────────────────
 const OMWTY_SYSTEM = `You are the AI Writing Assistant for "On My Way To You" — a dual POV literary fiction novel co-written by Brandon and his co-author. You know this novel intimately. Here is the complete canon:
@@ -1905,6 +2111,21 @@ function openChapterEditor(id) {
 function closeChapterEditor() {
   document.getElementById('chapter-editor-overlay').style.display = 'none';
   editorChapterId = null;
+}
+
+async function deleteChapter() {
+  const c = chapters.find(x=>x.id===editorChapterId);
+  if(!c) return;
+  if(!confirm(`Delete Ch. ${c.number} — "${c.title}"?\n\nThis permanently deletes the chapter and all its version history. Cannot be undone.`)) return;
+  await sb(`chapter_versions?chapter_id=eq.${editorChapterId}`, {method:'DELETE'});
+  await sb(`passage_notes?chapter_id=eq.${editorChapterId}`, {method:'DELETE'});
+  await sb(`chapters?id=eq.${editorChapterId}`, {method:'DELETE'});
+  closeChapterEditor();
+  await loadChapters();
+  renderChapters();
+  renderDashboard();
+  logActivity(`Deleted chapter: "${c.title}"`);
+  toast(`Chapter "${c.title}" deleted`);
 }
 
 function showEditorTab(tab) {
@@ -2621,6 +2842,230 @@ function showEditorTab(tab) {
   if(btn){btn.style.background='var(--accent)';btn.style.color='#fff';}
   if(tab==='notes'){loadPassageNotes(editorChapterId).then(()=>renderPassageNotes());}
   if(tab==='entry'){updateEntryPrompt();}
+}
+
+// ─── READ MODE ────────────────────────────────────────────
+let readChapterIndex = 0;
+let readChapters = [];
+
+function openReadMode() {
+  readChapters = [...chapters].sort((a,b)=>a.number-b.number).filter(c=>c.body&&c.body.trim().length>0);
+  if(!readChapters.length) {
+    toast('No written chapters yet — start writing first!');
+    return;
+  }
+  readChapterIndex = 0;
+  document.getElementById('read-mode-overlay').style.display = 'flex';
+  renderReadChapter();
+}
+
+function closeReadMode() {
+  document.getElementById('read-mode-overlay').style.display = 'none';
+  if(ttsActive) { speechSynthesis.cancel(); ttsActive=false; }
+}
+
+function renderReadChapter() {
+  const c = readChapters[readChapterIndex];
+  if(!c) return;
+
+  document.getElementById('read-mode-title').textContent = `Ch. ${c.number} — ${c.title}`;
+  document.getElementById('read-chapter-indicator').textContent = `Chapter ${readChapterIndex+1} of ${readChapters.length}`;
+  document.getElementById('read-prev').disabled = readChapterIndex===0;
+  document.getElementById('read-next').disabled = readChapterIndex===readChapters.length-1;
+
+  const body = c.body||'';
+  const paragraphs = body.split('\n').filter(p=>p.trim());
+  const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+
+  const width = document.getElementById('read-width').value;
+  const content = document.getElementById('read-mode-content');
+  content.style.maxWidth = width+'px';
+
+  content.innerHTML = `
+    <div style="text-align:center;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Chapter ${c.number}</div>
+      <div style="font-size:26px;font-weight:400;color:#e8e8e8;margin-bottom:8px">${escHtml(c.title)}</div>
+      ${c.pov?`<div style="font-size:12px;color:#666;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+      <div style="font-size:11px;color:#444;margin-top:8px">${wc.toLocaleString()} words</div>
+    </div>
+    ${paragraphs.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+    <div style="text-align:center;margin-top:48px;color:#444;font-size:20px">* * *</div>
+  `;
+
+  document.getElementById('read-mode-body').scrollTop = 0;
+  updateReadProgress();
+}
+
+function updateReadStyle() {
+  const font = document.getElementById('read-font').value;
+  const size = document.getElementById('read-size').value;
+  const width = document.getElementById('read-width').value;
+  const content = document.getElementById('read-mode-content');
+  content.style.fontFamily = font;
+  content.style.fontSize = size+'px';
+  content.style.maxWidth = width+'px';
+}
+
+function updateReadProgress() {
+  const body = document.getElementById('read-mode-body');
+  const pct = Math.round((body.scrollTop/(body.scrollHeight-body.clientHeight))*100)||0;
+  document.getElementById('read-progress').textContent = pct+'% read';
+}
+
+function readModePrev() {
+  if(readChapterIndex>0) { readChapterIndex--; renderReadChapter(); }
+}
+
+function readModeNext() {
+  if(readChapterIndex<readChapters.length-1) { readChapterIndex++; renderReadChapter(); }
+}
+
+// Keyboard navigation in read mode
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('read-mode-overlay').style.display!=='flex') return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') readModeNext();
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') readModePrev();
+  if(e.key==='Escape') closeReadMode();
+});
+
+// ─── EXPORT ───────────────────────────────────────────────
+function openExportModal() {
+  // Populate author field
+  document.getElementById('export-authors').value = authors.map(a=>a.name).join(' & ');
+
+  // Build chapter checklist
+  const list = document.getElementById('export-chapter-list');
+  const sorted = [...chapters].sort((a,b)=>a.number-b.number);
+  list.innerHTML = sorted.map(c=>{
+    const wc = c.word_count||0;
+    const hasBody = c.body&&c.body.trim().length>0;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:${hasBody?'var(--text)':'var(--text3)'};cursor:pointer;padding:2px 0">
+      <input type="checkbox" class="export-chap-cb" value="${c.id}" ${hasBody?'checked':''} style="accent-color:var(--accent)" onchange="updateExportSummary()"/>
+      Ch. ${c.number} — ${escHtml(c.title)}
+      <span style="margin-left:auto;color:var(--text3);font-size:11px">${hasBody?wc.toLocaleString()+' w':'no content'}</span>
+    </label>`;
+  }).join('');
+
+  updateExportSummary();
+  openModal('modal-export');
+}
+
+function exportSelectAll() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>cb.checked=true);
+  updateExportSummary();
+}
+function exportSelectNone() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>cb.checked=false);
+  updateExportSummary();
+}
+function exportSelectWritten() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>{
+    const id=cb.value;
+    const c=chapters.find(x=>x.id===id);
+    cb.checked = !!(c&&c.body&&c.body.trim().length>0);
+  });
+  updateExportSummary();
+}
+
+function updateExportSummary() {
+  const selected = [...document.querySelectorAll('.export-chap-cb:checked')].map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean);
+  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
+  document.getElementById('export-summary').textContent = `${selected.length} chapter${selected.length!==1?'s':''} selected · ${totalWc.toLocaleString()} words total`;
+}
+
+function runExport() {
+  const title = document.getElementById('export-title').value.trim()||'On My Way To You';
+  const authorStr = document.getElementById('export-authors').value.trim();
+  const format = document.getElementById('export-format').value;
+  const incBrief = document.getElementById('export-inc-brief').checked;
+  const incWc = document.getElementById('export-inc-wc').checked;
+  const incPov = document.getElementById('export-inc-pov').checked;
+
+  const selected = [...document.querySelectorAll('.export-chap-cb:checked')]
+    .map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean)
+    .sort((a,b)=>a.number-b.number);
+
+  if(!selected.length) { toast('Select at least one chapter'); return; }
+
+  let output = '';
+  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
+
+  if(format==='txt') {
+    output += `${title.toUpperCase()}\n`;
+    if(authorStr) output += `by ${authorStr}\n`;
+    output += `\n${totalWc.toLocaleString()} words · ${selected.length} chapters\n`;
+    output += '\n' + '─'.repeat(60) + '\n\n';
+
+    selected.forEach(c=>{
+      output += `CHAPTER ${c.number}\n${c.title.toUpperCase()}\n`;
+      if(incPov&&c.pov) output += `[${c.pov}'s POV]\n`;
+      if(incWc) output += `[${(c.word_count||0).toLocaleString()} words]\n`;
+      output += '\n';
+      if(incBrief&&c.notes) output += `[BRIEF: ${c.notes}]\n\n`;
+      output += (c.body||'[No content written yet]') + '\n\n';
+      output += '* * *\n\n';
+    });
+
+    downloadFile(title.replace(/\s+/g,'_')+'.txt', output, 'text/plain');
+
+  } else if(format==='md') {
+    output += `# ${title}\n`;
+    if(authorStr) output += `*by ${authorStr}*\n\n`;
+    output += `---\n*${totalWc.toLocaleString()} words · ${selected.length} chapters*\n\n---\n\n`;
+
+    selected.forEach(c=>{
+      output += `## Chapter ${c.number}: ${c.title}\n\n`;
+      if(incPov&&c.pov) output += `*${c.pov}'s POV*`;
+      if(incWc) output += ` · *${(c.word_count||0).toLocaleString()} words*`;
+      if(incPov||incWc) output += '\n\n';
+      if(incBrief&&c.notes) output += `> **Brief:** ${c.notes}\n\n`;
+      output += (c.body||'*No content written yet.*') + '\n\n---\n\n';
+    });
+
+    downloadFile(title.replace(/\s+/g,'_')+'.md', output, 'text/markdown');
+
+  } else {
+    // HTML
+    const chapHtml = selected.map(c=>`
+      <div class="chapter" style="margin-bottom:60px;page-break-after:always">
+        <div style="text-align:center;margin-bottom:36px">
+          <div style="font-size:12px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
+          <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px">${escHtml(c.title)}</h2>
+          ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+          ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
+        </div>
+        ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic">${escHtml(c.notes)}</div>`:''}
+        <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
+          ${(c.body||'<em>No content written yet.</em>').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+        </div>
+        <div style="text-align:center;margin-top:40px;color:#ccc">* * *</div>
+      </div>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
+    <style>body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}
+    @media print{.chapter{page-break-after:always}}</style></head><body>
+    <div style="text-align:center;margin-bottom:80px;padding-bottom:40px;border-bottom:1px solid #eee">
+      <h1 style="font-size:32px;font-weight:400;margin:0 0 12px">${escHtml(title)}</h1>
+      ${authorStr?`<div style="font-size:16px;color:#777;font-style:italic">by ${escHtml(authorStr)}</div>`:''}
+      <div style="font-size:13px;color:#aaa;margin-top:12px">${totalWc.toLocaleString()} words · ${selected.length} chapters</div>
+    </div>
+    ${chapHtml}</body></html>`;
+
+    downloadFile(title.replace(/\s+/g,'_')+'.html', html, 'text/html');
+  }
+
+  closeModal('modal-export');
+  toast(`Exported ${selected.length} chapters — ${totalWc.toLocaleString()} words`);
+}
+
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], {type:mimeType});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ─── BOOT ─────────────────────────────────────────────────
