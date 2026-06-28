@@ -33,29 +33,42 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .app{display:flex;height:100vh}
 
 /* SIDEBAR */
-.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.sidebar-header{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
-.novel-title{font-size:15px;font-weight:600;color:var(--text);line-height:1.3}
-.novel-sub{font-size:11px;color:var(--text3);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
-.nav{flex:1;padding:10px 0;overflow-y:auto}
-.nav-section{padding:14px 16px 4px;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);font-size:13.5px;border-left:2px solid transparent;transition:all .15s;user-select:none}
+.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .2s ease;flex-shrink:0}
+.sidebar.collapsed{width:54px;min-width:54px}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.novel-title{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.novel-sub{font-size:11px;color:var(--text3);margin-top:2px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+.sidebar.collapsed .novel-title,.sidebar.collapsed .novel-sub,.sidebar.collapsed .authors-box,.sidebar.collapsed .sidebar-footer .nav-label,.sidebar.collapsed #authors-box{display:none}
+.sidebar.collapsed .nav-section{display:none}
+.sidebar.collapsed .nav-label{display:none}
+.sidebar.collapsed .nav-item{justify-content:center;padding:10px 0}
+.sidebar.collapsed .theme-btn .nav-label{display:none}
+.sidebar-collapse-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:13px;flex-shrink:0}
+.sidebar-collapse-btn:hover{color:var(--accent);background:var(--bg3)}
+.nav{flex:1;padding:8px 0;overflow-y:auto;overflow-x:hidden}
+.nav::-webkit-scrollbar{width:3px}.nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.nav-section{padding:12px 16px 4px;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:var(--text2);font-size:13px;border-left:2px solid transparent;transition:all .12s;user-select:none;white-space:nowrap}
 .nav-item:hover{color:var(--text);background:var(--bg3)}
 .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-glow);font-weight:500}
-.nav-item i{width:16px;text-align:center;font-size:14px}
-.authors-box{margin:10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:12px}
-.authors-label{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
-.author-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.author-row:last-child{margin-bottom:0}
+.nav-item i{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.authors-box{margin:8px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:10px;flex-shrink:0}
+.authors-label{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
 .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
-.author-name-edit{flex:1;background:transparent;border:none;color:var(--text);font-size:12px;padding:0;cursor:pointer;outline:none}
+.author-name-edit{flex:1;background:transparent;border:none;color:var(--text);font-size:12px;padding:0;cursor:pointer;outline:none;min-width:0}
 .author-name-edit:hover{color:var(--accent)}
 .author-name-edit:focus{border-bottom:1px solid var(--accent);cursor:text}
-.online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sidebar-footer{padding:8px;border-top:1px solid var(--border);flex-shrink:0}
+.theme-btn{width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:12px;transition:all .15s;white-space:nowrap;overflow:hidden}
+.theme-btn:hover{background:var(--bg3)}
+
+/* MOBILE TOPBAR */
+#mobile-topbar{display:none}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149}
 
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
 .page-title{font-size:16px;font-weight:600;color:var(--text)}
 .topbar-right{display:flex;gap:8px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;white-space:nowrap}
@@ -68,6 +81,97 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .content{flex:1;overflow-y:auto;padding:20px}
 .tab{display:none}
 .tab.active{display:block}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .app{flex-direction:column;height:100vh;height:100dvh}
+
+  /* Mobile topbar */
+  #mobile-topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 14px;
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    flex-shrink:0;z-index:10;
+  }
+  #mobile-topbar #hamburger-btn{background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px}
+  #mobile-topbar #hamburger-btn:hover{background:var(--bg3)}
+  #mobile-page-title{flex:1;font-size:15px;font-weight:600;color:var(--text)}
+  #desktop-topbar{display:none}
+
+  /* Sidebar becomes a slide-in drawer */
+  .sidebar{
+    position:fixed;top:0;left:-280px;width:260px!important;min-width:260px!important;
+    height:100%;z-index:150;
+    transition:left .25s ease;
+    box-shadow:none;
+  }
+  .sidebar.mobile-open{
+    left:0;
+    box-shadow:4px 0 20px rgba(0,0,0,.2);
+  }
+  #mobile-overlay.active{display:block}
+
+  /* Hide collapse button on mobile */
+  .sidebar-collapse-btn{display:none}
+
+  /* Show all nav labels in mobile drawer */
+  .sidebar .nav-label{display:inline!important}
+  .sidebar .nav-section{display:block!important}
+  .sidebar .nav-item{justify-content:flex-start!important;padding:10px 16px!important}
+  .sidebar .authors-box{display:block!important}
+  .sidebar .sidebar-footer{display:block!important}
+  .sidebar .theme-btn .nav-label{display:inline!important}
+
+  /* Main content fills screen */
+  .main{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .content{padding:12px;flex:1;overflow-y:auto}
+
+  /* Stats */
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .stat-val{font-size:20px}
+  .stat-card{padding:12px}
+
+  /* Ideas */
+  .ideas-grid{grid-template-columns:1fr 1fr}
+
+  /* Modals slide up */
+  .modal{width:100%!important;max-width:100%!important;max-height:88vh;border-radius:20px 20px 0 0!important;margin:0}
+  .modal-bg{align-items:flex-end;padding:0}
+
+  /* Editor */
+  #editor-body{padding:14px;font-size:15px;line-height:1.75}
+  #editor-title{font-size:13px}
+  #editor-notes-panel,#editor-brief-panel,#editor-history-panel,#editor-drift-panel,#editor-entry-panel{width:100%!important;position:absolute;bottom:0;left:0;right:0;height:55vh;border-left:none!important;border-top:1px solid var(--border);z-index:20}
+
+  /* AI */
+  #tab-ai>div{flex-direction:column}
+  #tab-ai>div>div:first-child{width:100%!important;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--border)}
+  #ai-chat-list{display:flex;flex-direction:row;overflow-x:auto;padding:6px;gap:6px;max-height:none!important;flex-wrap:nowrap}
+  #ai-messages{min-height:180px}
+
+  /* Search */
+  #search-overlay{padding-top:16px}
+  #search-overlay>div{width:100%;border-radius:20px 20px 0 0;position:fixed;bottom:0}
+
+  /* Toast */
+  .toast{bottom:20px;right:12px;left:12px;max-width:none;text-align:center}
+
+  /* Tasks */
+  #tab-tasks>div:first-child{flex-direction:column}
+
+  /* Read mode */
+  #read-mode-overlay>div:first-child{flex-wrap:wrap;gap:5px;padding:8px 10px}
+  #read-mode-overlay>div:first-child select{font-size:10px;padding:2px 4px}
+  #read-mode-body{padding:20px 12px}
+  #chapter-editor-overlay{z-index:200}
+}
+
+@media(max-width:480px){
+  .ideas-grid{grid-template-columns:1fr}
+  .content{padding:8px}
+  .btn{padding:6px 10px;font-size:12px}
+  .stats-grid{gap:6px}
+}
 
 /* LOADING */
 .loading{display:flex;align-items:center;justify-content:center;height:120px;color:var(--text3);gap:10px;font-size:13px}
@@ -179,130 +283,79 @@ select.form-input option{background:var(--bg2)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
 .empty-state i{font-size:32px;margin-bottom:10px;display:block;color:var(--text3)}
 .empty-state p{font-size:13px}
-
-@media (max-width:768px){
-  .app{flex-direction:column}
-  .sidebar{
-    width:100%;min-width:0;
-    position:fixed;bottom:0;left:0;right:0;
-    height:60px;z-index:100;
-    flex-direction:row;border-right:none;
-    border-top:1px solid var(--border);
-    background:var(--bg2);overflow:visible;
-    box-shadow:0 -4px 20px rgba(0,0,0,.3);
-  }
-  .sidebar-header{display:none}
-  .authors-box{display:none}
-  .nav{
-    display:flex;flex-direction:row;width:100%;
-    overflow-x:auto;padding:0;
-    scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  }
-  .nav::-webkit-scrollbar{display:none}
-  .nav-section{display:none}
-  .nav-item{
-    flex-direction:column;gap:2px;
-    padding:6px 10px;font-size:9px;
-    border-left:none;border-top:2px solid transparent;
-    white-space:nowrap;min-width:52px;
-    justify-content:center;align-items:center;
-    flex-shrink:0;height:60px;
-  }
-  .nav-item i{width:auto;font-size:18px;margin-bottom:1px}
-  .nav-item.active{border-left:none;border-top:2px solid var(--accent);background:var(--accent-glow);color:var(--accent)}
-  .main{flex:1;padding-bottom:60px;overflow:hidden;display:flex;flex-direction:column}
-  .topbar{padding:10px 12px}
-  .page-title{font-size:14px}
-  .content{padding:12px;flex:1;overflow-y:auto}
-  .stats-grid{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-  .stat-val{font-size:20px}
-  .stat-card{padding:12px}
-  .ideas-grid{grid-template-columns:1fr 1fr}
-  .modal{width:100%!important;max-width:100%!important;max-height:88vh;border-radius:20px 20px 0 0!important;margin:0}
-  .modal-bg{align-items:flex-end;padding:0}
-  #editor-body{padding:14px;font-size:15px;line-height:1.75}
-  #editor-title{font-size:13px}
-  #editor-notes-panel,#editor-brief-panel,#editor-history-panel,#editor-drift-panel,#editor-entry-panel{
-    width:100%!important;position:absolute;bottom:0;left:0;right:0;
-    height:55vh;border-left:none!important;border-top:1px solid var(--border);z-index:20
-  }
-  #tab-ai>div{flex-direction:column}
-  #tab-ai>div>div:first-child{width:100%!important;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--border)}
-  #ai-chat-list{display:flex;flex-direction:row;overflow-x:auto;padding:6px;gap:6px;max-height:none!important;flex-wrap:nowrap}
-  #ai-messages{min-height:180px}
-  #search-overlay{padding-top:16px}
-  #search-overlay>div{width:100%;border-radius:20px 20px 0 0;position:fixed;bottom:0}
-  .toast{bottom:72px;right:12px;left:12px;max-width:none;text-align:center}
-  #tab-tasks>div:first-child{flex-direction:column}
-  .chapter-card{padding:10px 12px}
-  .doc-upload-zone{padding:16px}
-  #read-mode-overlay>div:first-child{flex-wrap:wrap;gap:5px;padding:8px 10px}
-  #read-mode-overlay>div:first-child select{font-size:10px;padding:2px 4px}
-  #read-mode-body{padding:20px 12px}
-  #chapter-editor-overlay{z-index:200}
-}
-@media (max-width:480px){
-  .ideas-grid{grid-template-columns:1fr}
-  .nav-item{padding:6px 8px;min-width:44px;font-size:8px}
-  .nav-item i{font-size:16px}
-  .content{padding:8px}
-  .btn{padding:6px 10px;font-size:12px}
-  .stats-grid{grid-template-columns:repeat(2,1fr);gap:6px}
-}
 </style>
 </head>
 <body>
 
 <div class="app">
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
+  <!-- MOBILE TOPBAR (visible on mobile only) -->
+  <div id="mobile-topbar">
+    <button onclick="toggleMobileMenu()" id="hamburger-btn" aria-label="Menu">
+      <i class="fas fa-bars"></i>
+    </button>
+    <span id="mobile-page-title">Dashboard</span>
+    <button class="btn btn-primary btn-sm" onclick="topbarAction()" style="font-size:12px;padding:6px 12px">
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+
+  <!-- MOBILE OVERLAY -->
+  <div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- SIDEBAR (collapsible on desktop, drawer on mobile) -->
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="novel-title">On My Way To You</div>
-      <div class="novel-sub">Collaboration Hub</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="novel-title">On My Way To You</div>
+          <div class="novel-sub">Collaboration Hub</div>
+        </div>
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar" id="collapse-btn">
+          <i class="fas fa-chevron-left" id="collapse-icon"></i>
+        </button>
+      </div>
     </div>
-    <div class="nav">
+
+    <div class="nav" id="main-nav">
       <div class="nav-section">Workspace</div>
-      <div class="nav-item active" onclick="showTab('dashboard',this)"><i class="fas fa-home"></i>Dashboard</div>
-      <div class="nav-item" onclick="showTab('chapters',this)"><i class="fas fa-list-ol"></i>Chapters</div>
-      <div class="nav-item" onclick="showTab('ideas',this)"><i class="fas fa-lightbulb"></i>Idea Board</div>
-      <div class="nav-item" onclick="showTab('docs',this)"><i class="fas fa-folder-open"></i>Documents</div>
-      <div class="nav-item" onclick="showTab('discuss',this)"><i class="fas fa-comments"></i>Discussion</div>
-      <div class="nav-item" onclick="showTab('meet',this)"><i class="fas fa-video"></i>Meet</div>
+      <div class="nav-item active" onclick="showTab('dashboard',this)"><i class="fas fa-home"></i><span class="nav-label">Dashboard</span></div>
+      <div class="nav-item" onclick="showTab('chapters',this)"><i class="fas fa-list-ol"></i><span class="nav-label">Chapters</span></div>
+      <div class="nav-item" onclick="showTab('ideas',this)"><i class="fas fa-lightbulb"></i><span class="nav-label">Idea Board</span></div>
+      <div class="nav-item" onclick="showTab('docs',this)"><i class="fas fa-folder-open"></i><span class="nav-label">Documents</span></div>
+      <div class="nav-item" onclick="showTab('discuss',this)"><i class="fas fa-comments"></i><span class="nav-label">Discussion</span></div>
+      <div class="nav-item" onclick="showTab('meet',this)"><i class="fas fa-video"></i><span class="nav-label">Meet</span></div>
       <div class="nav-section">Story Tools</div>
-      <div class="nav-item" onclick="showTab('ai',this)"><i class="fas fa-robot"></i>AI Assistant</div>
-      <div class="nav-item" onclick="showTab('characters',this)"><i class="fas fa-users"></i>Characters</div>
-      <div class="nav-item" onclick="showTab('timeline',this)"><i class="fas fa-stream"></i>Timeline</div>
+      <div class="nav-item" onclick="showTab('ai',this)"><i class="fas fa-robot"></i><span class="nav-label">AI Assistant</span></div>
+      <div class="nav-item" onclick="showTab('characters',this)"><i class="fas fa-users"></i><span class="nav-label">Characters</span></div>
+      <div class="nav-item" onclick="showTab('timeline',this)"><i class="fas fa-stream"></i><span class="nav-label">Timeline</span></div>
       <div class="nav-section">Writing</div>
-      <div class="nav-item" onclick="showTab('tasks',this)"><i class="fas fa-tasks"></i>Tasks</div>
-      <div class="nav-item" onclick="showTab('milestones',this)"><i class="fas fa-flag"></i>Milestones</div>
+      <div class="nav-item" onclick="showTab('tasks',this)"><i class="fas fa-tasks"></i><span class="nav-label">Tasks</span></div>
+      <div class="nav-item" onclick="showTab('milestones',this)"><i class="fas fa-flag"></i><span class="nav-label">Milestones</span></div>
       <div class="nav-section">Tools</div>
-      <div class="nav-item" onclick="openSearch()"><i class="fas fa-search"></i>Search</div>
-      <div class="nav-item" onclick="showTab('sessions',this)"><i class="fas fa-pen-nib"></i>Sessions</div>
-      <div class="nav-item" onclick="openReadMode()"><i class="fas fa-book-reader"></i>Read Mode</div>
-      <div class="nav-item" onclick="openExportModal()"><i class="fas fa-file-export"></i>Export</div>
+      <div class="nav-item" onclick="openSearch()"><i class="fas fa-search"></i><span class="nav-label">Search</span></div>
+      <div class="nav-item" onclick="showTab('sessions',this)"><i class="fas fa-pen-nib"></i><span class="nav-label">Sessions</span></div>
+      <div class="nav-item" onclick="openReadMode()"><i class="fas fa-book-reader"></i><span class="nav-label">Read Mode</span></div>
+      <div class="nav-item" onclick="openExportModal()"><i class="fas fa-file-export"></i><span class="nav-label">Export</span></div>
     </div>
-    <div class="authors-box">
-      <div class="authors-label">Co-Authors</div>
-      <div id="authors-list">
-        <div class="loading"><div class="spinner"></div></div>
-      </div>
-      <div style="margin-top:10px">
-        <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="openAddAuthor()"><i class="fas fa-plus"></i> Add Author</button>
-      </div>
+
+    <div class="authors-box" id="authors-box">
+      <div class="authors-label">Your Name</div>
+      <div id="authors-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
-    <div style="padding:10px;border-top:1px solid var(--border);flex-shrink:0">
-      <button onclick="openThemePanel()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:12px;transition:all .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+
+    <div class="sidebar-footer" id="sidebar-footer">
+      <button onclick="openThemePanel()" class="theme-btn">
         <i class="fas fa-palette" style="color:var(--accent)"></i>
-        <span>Theme & Appearance</span>
-        <span id="theme-mode-badge" style="margin-left:auto;font-size:10px;padding:2px 6px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Light</span>
+        <span class="nav-label">Theme & Appearance</span>
+        <span id="theme-mode-badge" class="nav-label" style="margin-left:auto;font-size:10px;padding:2px 6px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Light</span>
       </button>
     </div>
   </div>
 
   <!-- MAIN -->
   <div class="main">
-    <div class="topbar">
+    <div class="topbar" id="desktop-topbar">
       <div class="page-title" id="page-title">Dashboard</div>
       <div class="topbar-right" id="topbar-right">
         <button class="btn btn-primary" onclick="topbarAction()"><i class="fas fa-plus" id="topbar-icon"></i><span id="topbar-label">New Chapter</span></button>
@@ -1051,63 +1104,97 @@ let authors = [], chapters = [], ideas = [], documents = [], activity = [], disc
 let currentTab = 'dashboard';
 let editingChapterId = null;
 let pdfDoc = null, pdfPage = 1;
-let currentAuthorId = null;
+// currentAuthorId replaced by currentDisplayName
 
 // ─── INIT ─────────────────────────────────────────────────
 async function init() {
-  await loadAuthors();
-  await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAiChats(),loadCharacters(),loadTimeline(),loadTasks(),loadMilestones(),loadSessions()]);
+  initDisplayName();
+  // Load each table independently — a missing table won't block others
+  await Promise.all([
+    loadChapters(), loadIdeas(), loadDocuments(),
+    loadActivity(), loadDiscussion(), loadAiChats(),
+    loadCharacters(), loadTimeline(), loadTasks(),
+    loadMilestones(), loadSessions()
+  ].map(p => p.catch(e => console.warn('Load error (non-fatal):', e))));
   renderDashboard();
   setupRealtime();
   setupDragDrop();
-  populateAiAuthorSelect();
 }
 
-// ─── AUTHORS ─────────────────────────────────────────────
-async function loadAuthors() {
-  const d = await sb('authors?order=created_at');
-  if(d) authors = d;
-  renderAuthors();
+// ─── DISPLAY NAME (no authors table) ─────────────────────
+// Each person sets their name once, stored in localStorage
+// Name is stored as plain text with all content — no UUID needed
+
+let currentDisplayName = 'You';
+
+function initDisplayName() {
+  const saved = localStorage.getItem('omwty_display_name');
+  if(saved) {
+    currentDisplayName = saved;
+  }
+  renderDisplayName();
+  // If no name set, prompt after a short delay
+  if(!saved) setTimeout(promptForName, 800);
 }
 
-function renderAuthors() {
+function renderDisplayName() {
   const el = document.getElementById('authors-list');
-  if(!authors.length) { el.innerHTML='<div style="font-size:12px;color:var(--text3)">No authors yet</div>'; return; }
-  el.innerHTML = authors.map(a=>`
-    <div class="author-row">
-      <div class="av" style="background:${a.color}22;color:${a.color}">${a.name.slice(0,2).toUpperCase()}</div>
-      <input class="author-name-edit" value="${escHtml(a.name)}" onblur="updateAuthorName('${a.id}',this.value)" title="Click to edit name"/>
-    </div>`).join('');
-
-  // Populate author selects
-  ['chap-author','idea-author','compose-author-select'].forEach(id=>{
-    const sel = document.getElementById(id);
-    if(!sel) return;
-    const prev = sel.value;
-    sel.innerHTML = authors.map(a=>`<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
-    if(prev) sel.value = prev;
-  });
-
-  if(!currentAuthorId && authors.length) currentAuthorId = authors[0].id;
+  if(!el) return;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${currentDisplayName.slice(0,2).toUpperCase()}</div>
+      <input id="display-name-input" value="${escHtml(currentDisplayName)}" 
+        style="flex:1;background:transparent;border:none;color:var(--text);font-size:12px;outline:none;cursor:pointer"
+        onblur="saveDisplayName(this.value)"
+        onkeydown="if(event.key==='Enter'){this.blur()}"
+        title="Click to change your display name"/>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:5px">Tap name to edit</div>`;
+  // Update compose avatar
   updateComposeAuthor();
+  updateAiAuthor();
 }
 
-async function updateAuthorName(id, name) {
+function saveDisplayName(name) {
   if(!name.trim()) return;
-  await sb(`authors?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({name:name.trim()})});
-  await loadAuthors();
-  toast('Author name updated');
+  currentDisplayName = name.trim();
+  localStorage.setItem('omwty_display_name', currentDisplayName);
+  renderDisplayName();
+  toast('Name saved — ' + currentDisplayName);
 }
 
-async function saveAuthor() {
-  const name = document.getElementById('author-name').value.trim();
-  const color = document.getElementById('author-color').value;
-  if(!name) return;
-  await sb('authors', {method:'POST', body:JSON.stringify({name,color}), headers:{...h,'Prefer':'return=representation'}});
-  await loadAuthors();
-  closeModal('modal-author');
-  toast('Author added');
-  logActivity(`Added author "${name}"`);
+function promptForName() {
+  const name = prompt('What\'s your name? (This identifies your contributions in the hub)', 'Your Name');
+  if(name && name.trim()) {
+    currentDisplayName = name.trim();
+    localStorage.setItem('omwty_display_name', currentDisplayName);
+    renderDisplayName();
+    toast('Welcome, ' + currentDisplayName + '!');
+  }
+}
+
+function openAddAuthor() {
+  promptForName();
+}
+
+// Stub out old author functions so nothing breaks
+async function loadAuthors() { return; }
+function populateAiAuthorSelect() { updateAiAuthor(); }
+function updateAiAuthor() {
+  const sel = document.getElementById('ai-author-select');
+  if(sel) sel.innerHTML = `<option value="${escHtml(currentDisplayName)}">${escHtml(currentDisplayName)}</option>`;
+  const av = document.getElementById('compose-av');
+  if(av) { av.textContent = currentDisplayName.slice(0,2).toUpperCase(); }
+}
+
+// Replace author ID lookups with name lookups throughout
+function getAuthorName(authorId) {
+  // authorId is now actually a display name string
+  return authorId || 'Unknown';
+}
+
+function currentAuthorForSave() {
+  return currentDisplayName;
 }
 
 function openAddAuthor() { document.getElementById('author-name').value=''; openModal('modal-author'); }
@@ -1126,7 +1213,7 @@ function renderChapters() {
   }
   const sorted = [...chapters].sort((a,b)=>a.number-b.number);
   el.innerHTML = sorted.map(c=>{
-    const auth = authors.find(a=>a.id===c.author_id);
+    const authName = c.author_id||'';
     const pct = {outline:5,draft:35,review:75,done:100}[c.status]||0;
     const hasBody = c.body&&c.body.trim().length>0;
     const statuses = ['outline','draft','review','done'];
@@ -1147,7 +1234,7 @@ function renderChapters() {
         ${statusBtns}
       </div>
       <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':'0 words'} ${auth?'· '+auth.name:''}</div>
+      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':'0 words'} ${authName?'· '+authName:''}</div>
     </div>`;
   }).join('');
 }
@@ -1228,12 +1315,12 @@ function renderIdeas() {
   if(!ideas.length){ grid.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   grid.innerHTML = ideas.map(i=>{
-    const auth = authors.find(a=>a.id===i.author_id);
+    const name = i.author_id || 'Unknown';
     return `<div class="idea-card cat-${i.category}">
       <div class="idea-card-header">${catLabel(i.category)}</div>
       <div class="idea-body">${escHtml(i.content)}</div>
       <div class="idea-footer">
-        <span class="idea-author">${auth?auth.name:'Unknown'} · ${timeAgo(i.created_at)}</span>
+        <span class="idea-author">${escHtml(name)} · ${timeAgo(i.created_at)}</span>
         <button class="idea-del" onclick="deleteIdea('${i.id}',event)" title="Delete"><i class="fas fa-times"></i></button>
       </div>
     </div>`;
@@ -1243,8 +1330,7 @@ function renderIdeas() {
 async function saveIdea() {
   const content = document.getElementById('idea-text').value.trim();
   if(!content) return;
-  const author_id = document.getElementById('idea-author').value||null;
-  await sb('ideas', {method:'POST', body:JSON.stringify({category:document.getElementById('idea-cat').value, content, author_id}), headers:{...h,'Prefer':'return=representation'}});
+  await sb('ideas', {method:'POST', body:JSON.stringify({category:document.getElementById('idea-cat').value, content, author_id:currentDisplayName}), headers:{...h,'Prefer':'return=representation'}});
   closeModal('modal-idea');
   toast('Idea added');
   logActivity(`Added a ${document.getElementById('idea-cat').value} idea`);
@@ -1274,13 +1360,13 @@ function renderDocuments() {
   const el = document.getElementById('docs-list');
   if(!documents.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-folder-open"></i><p>No documents yet — upload your first one!</p></div>'; return; }
   el.innerHTML = documents.map(d=>{
-    const auth = authors.find(a=>a.id===d.author_id);
+    const name = d.author_id || 'Unknown';
     const url = sbStorageUrl(d.file_path);
     return `<div class="doc-row">
       <span class="doc-icon">${fileIcon(d.file_type)}</span>
       <div class="doc-info">
         <div class="doc-name">${escHtml(d.name)}</div>
-        <div class="doc-meta">${formatBytes(d.file_size)} · ${auth?auth.name:'Unknown'} · ${timeAgo(d.created_at)}</div>
+        <div class="doc-meta">${formatBytes(d.file_size)} · ${escHtml(name)} · ${timeAgo(d.created_at)}</div>
       </div>
       <div class="doc-actions">
         <button class="btn btn-sm" onclick="viewDocument('${d.id}')" title="View"><i class="fas fa-eye"></i></button>
@@ -1302,7 +1388,6 @@ function handleFileSelect(e) { handleFiles(e.target.files); }
 
 async function handleFiles(files) {
   if(!files||!files.length) return;
-  const authorId = currentAuthorId;
   for(const file of files) {
     toast(`Uploading ${file.name}…`);
     const filePath = `${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
@@ -1310,7 +1395,7 @@ async function handleFiles(files) {
     if(!ok){ toast(`Failed to upload ${file.name}`); continue; }
     await sb('documents', {
       method:'POST',
-      body:JSON.stringify({name:file.name, file_path:filePath, file_type:file.type||ext(file.name), file_size:file.size, author_id:authorId}),
+      body:JSON.stringify({name:file.name, file_path:filePath, file_type:file.type||ext(file.name), file_size:file.size, author_id:currentDisplayName}),
       headers:{...h,'Prefer':'return=representation'}
     });
     logActivity(`Uploaded document "${file.name}"`);
@@ -1409,14 +1494,14 @@ function renderDiscussion() {
   const el = document.getElementById('discussion-list');
   if(!discussion.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-comments"></i><p>Start the conversation!</p></div>'; return; }
   el.innerHTML = discussion.map(m=>{
-    const auth = authors.find(a=>a.id===m.author_id);
-    const color = auth?auth.color:'#8b7cf6';
-    const initials = auth?auth.name.slice(0,2).toUpperCase():'?';
+    const name = m.author_id || 'Unknown';
+    const initials = name.slice(0,2).toUpperCase();
+    const isMe = name === currentDisplayName;
     return `<div class="msg">
-      <div class="av" style="background:${color}22;color:${color};width:30px;height:30px;font-size:11px;flex-shrink:0">${initials}</div>
-      <div class="msg-bubble">
+      <div class="av" style="background:var(--accent-glow);color:var(--accent);width:30px;height:30px;font-size:11px;flex-shrink:0">${initials}</div>
+      <div class="msg-bubble" style="${isMe?'border-color:var(--accent-glow)':''}">
         <div class="msg-header">
-          <span class="msg-name">${auth?escHtml(auth.name):'Unknown'}</span>
+          <span class="msg-name">${escHtml(name)}</span>
           <span class="msg-time">${timeAgo(m.created_at)}</span>
         </div>
         <div class="msg-text">${escHtml(m.content)}</div>
@@ -1428,17 +1513,16 @@ function renderDiscussion() {
 
 function updateComposeAuthor() {
   const sel = document.getElementById('compose-author-select');
-  if(sel&&sel.value) currentAuthorId = sel.value;
-  const auth = authors.find(a=>a.id===currentAuthorId);
+  if(sel) sel.innerHTML = `<option value="${escHtml(currentDisplayName)}">${escHtml(currentDisplayName)}</option>`;
   const av = document.getElementById('compose-av');
-  if(auth&&av){ av.textContent=auth.name.slice(0,2).toUpperCase(); av.style.background=auth.color+'22'; av.style.color=auth.color; }
+  if(av) { av.textContent = currentDisplayName.slice(0,2).toUpperCase(); av.style.background='var(--accent-glow)'; av.style.color='var(--accent)'; }
 }
 
 async function sendMessage() {
   const input = document.getElementById('compose-input');
   const content = input.value.trim();
-  if(!content||!currentAuthorId) return;
-  await sb('discussion', {method:'POST', body:JSON.stringify({content, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
+  if(!content) return;
+  await sb('discussion', {method:'POST', body:JSON.stringify({content, author_id:currentDisplayName}), headers:{...h,'Prefer':'return=representation'}});
   input.value=''; input.style.height='';
   await loadDiscussion();
   renderDiscussion();
@@ -1454,7 +1538,7 @@ async function loadActivity() {
 }
 
 async function logActivity(action) {
-  await sb('activity', {method:'POST', body:JSON.stringify({action, author_id:currentAuthorId}), headers:{...h,'Prefer':'return=representation'}});
+  await sb('activity', {method:'POST', body:JSON.stringify({action, author_id:currentDisplayName}), headers:{...h,'Prefer':'return=representation'}});
   await loadActivity();
   renderDashboard();
 }
@@ -1463,12 +1547,11 @@ function renderActivity() {
   const el = document.getElementById('activity-list');
   if(!activity.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px">No activity yet</div>'; return; }
   el.innerHTML = activity.map(a=>{
-    const auth = authors.find(x=>x.id===a.author_id);
-    const color = auth?auth.color:'#8b7cf6';
-    const initials = auth?auth.name.slice(0,2).toUpperCase():'?';
+    const name = a.author_id || 'Someone';
+    const initials = name.slice(0,2).toUpperCase();
     return `<div class="activity-item">
-      <div class="activity-av" style="background:${color}22;color:${color}">${initials}</div>
-      <div class="activity-text"><strong>${auth?escHtml(auth.name):'Someone'}</strong> ${escHtml(a.action)}</div>
+      <div class="activity-av" style="background:var(--accent-glow);color:var(--accent)">${initials}</div>
+      <div class="activity-text"><strong>${escHtml(name)}</strong> ${escHtml(a.action)}</div>
       <div class="activity-time">${timeAgo(a.created_at)}</div>
     </div>`;
   }).join('');
@@ -1511,63 +1594,4 @@ const tabConfig = {
   docs:{title:'Documents', action:'Upload', actionFn:()=>document.getElementById('file-input').click()},
   discuss:{title:'Discussion', action:'Add Idea', actionFn:()=>openModal('modal-idea')},
   meet:{title:'Meet', action:'Join Room', actionFn:launchMeet},
-  ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>aiNewChat()},
-  characters:{title:'Characters', action:'Add Character', actionFn:()=>{document.getElementById('char-edit-id').value='';document.getElementById('modal-char-title').textContent='Add Character';['char-name','char-role','char-emoji','char-trait','char-flaw','char-lesson-short','char-lesson','char-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('char-color').value='#8b7cf6';openModal('modal-character');}},
-  timeline:{title:'Timeline & Plot Map', action:'Add Event', actionFn:()=>openAddEvent()},
-  tasks:{title:'Tasks', action:'Add Task', actionFn:()=>openAddTask()},
-  milestones:{title:'Milestones', action:'Add Milestone', actionFn:()=>openAddMilestone()},
-  sessions:{title:'Writing Sessions', action:'Log Session', actionFn:()=>openAddSession()},
-};
-
-// Track last render timestamps to avoid unnecessary re-renders
-const _lastRender = {};
-
-function showTab(tab, el) {
-  // Update nav immediately
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  if(el) el.classList.add('active');
-  // Show tab immediately — instant
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  const tabEl = document.getElementById('tab-'+tab);
-  if(tabEl) tabEl.classList.add('active');
-  currentTab = tab;
-  const cfg = tabConfig[tab];
-  if(cfg) {
-    document.getElementById('page-title').textContent = cfg.title;
-    document.getElementById('topbar-label').textContent = cfg.action;
-  }
-  // Render synchronously from cached data — no waiting
-  if(tab==='dashboard') renderDashboard();
-  else if(tab==='chapters') renderChapters();
-  else if(tab==='ideas') renderIdeas();
-  else if(tab==='docs') renderDocuments();
-  else if(tab==='discuss') renderDiscussion();
-  else if(tab==='characters') renderCharacters();
-  else if(tab==='timeline') renderTimeline();
-  else if(tab==='tasks') { populateTaskChapterSelect(); populateTaskAuthorSelect(); renderTasks(); }
-  else if(tab==='milestones') renderMilestones();
-  else if(tab==='sessions') renderSessions();
-  else if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
-  // Background refresh — fetch fresh data without blocking UI
-  setTimeout(()=>backgroundRefresh(tab), 100);
-}
-
-async function backgroundRefresh(tab) {
-  if(tab==='chapters') { await loadChapters(); renderChapters(); }
-  else if(tab==='ideas') { await loadIdeas(); renderIdeas(); }
-  else if(tab==='docs') { await loadDocuments(); renderDocuments(); }
-  else if(tab==='discuss') { await loadDiscussion(); renderDiscussion(); }
-  else if(tab==='timeline') { await loadTimeline(); renderTimeline(); }
-  else if(tab==='tasks') { await loadTasks(); renderTasks(); }
-  else if(tab==='milestones') { await loadMilestones(); renderMilestones(); }
-  else if(tab==='sessions') { await loadSessions(); renderSessions(); }
-  else if(tab==='dashboard') { await Promise.all([loadChapters(),loadActivity()]); renderDashboard(); }
-}
-
-function topbarAction() { tabConfig[currentTab].actionFn(); }
-
-// ─── MODALS ───────────────────────────────────────────────
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));closeV
+  ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>
