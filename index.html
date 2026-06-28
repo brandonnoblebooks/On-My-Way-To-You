@@ -1594,4 +1594,2051 @@ const tabConfig = {
   docs:{title:'Documents', action:'Upload', actionFn:()=>document.getElementById('file-input').click()},
   discuss:{title:'Discussion', action:'Add Idea', actionFn:()=>openModal('modal-idea')},
   meet:{title:'Meet', action:'Join Room', actionFn:launchMeet},
-  ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>
+  ai:{title:'AI Writing Assistant', action:'New Chat', actionFn:()=>aiNewChat()},
+  characters:{title:'Characters', action:'Add Character', actionFn:()=>{document.getElementById('char-edit-id').value='';document.getElementById('modal-char-title').textContent='Add Character';['char-name','char-role','char-emoji','char-trait','char-flaw','char-lesson-short','char-lesson','char-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('char-color').value='#8b7cf6';openModal('modal-character');}},
+  timeline:{title:'Timeline & Plot Map', action:'Add Event', actionFn:()=>openAddEvent()},
+  tasks:{title:'Tasks', action:'Add Task', actionFn:()=>openAddTask()},
+  milestones:{title:'Milestones', action:'Add Milestone', actionFn:()=>openAddMilestone()},
+  sessions:{title:'Writing Sessions', action:'Log Session', actionFn:()=>openAddSession()},
+};
+
+// Track last render timestamps to avoid unnecessary re-renders
+const _lastRender = {};
+
+function showTab(tab, el) {
+  // Update nav immediately
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  // Show tab immediately — instant
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const tabEl = document.getElementById('tab-'+tab);
+  if(tabEl) tabEl.classList.add('active');
+  currentTab = tab;
+  const cfg = tabConfig[tab];
+  if(cfg) {
+    document.getElementById('page-title').textContent = cfg.title;
+    document.getElementById('topbar-label').textContent = cfg.action;
+    // Sync mobile topbar title
+    const mobileTitle = document.getElementById('mobile-page-title');
+    if(mobileTitle) mobileTitle.textContent = cfg.title;
+  }
+  // Close mobile menu when a tab is selected
+  closeMobileMenu();
+  // Render synchronously from cached data — no waiting
+  if(tab==='dashboard') renderDashboard();
+  else if(tab==='chapters') renderChapters();
+  else if(tab==='ideas') renderIdeas();
+  else if(tab==='docs') renderDocuments();
+  else if(tab==='discuss') renderDiscussion();
+  else if(tab==='characters') renderCharacters();
+  else if(tab==='timeline') renderTimeline();
+  else if(tab==='tasks') { populateTaskChapterSelect(); populateTaskAuthorSelect(); renderTasks(); }
+  else if(tab==='milestones') renderMilestones();
+  else if(tab==='sessions') renderSessions();
+  else if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
+  // Background refresh — fetch fresh data without blocking UI
+  setTimeout(()=>backgroundRefresh(tab), 100);
+}
+
+async function backgroundRefresh(tab) {
+  if(tab==='chapters') { await loadChapters(); renderChapters(); }
+  else if(tab==='ideas') { await loadIdeas(); renderIdeas(); }
+  else if(tab==='docs') { await loadDocuments(); renderDocuments(); }
+  else if(tab==='discuss') { await loadDiscussion(); renderDiscussion(); }
+  else if(tab==='timeline') { await loadTimeline(); renderTimeline(); }
+  else if(tab==='tasks') { await loadTasks(); renderTasks(); }
+  else if(tab==='milestones') { await loadMilestones(); renderMilestones(); }
+  else if(tab==='sessions') { await loadSessions(); renderSessions(); }
+  else if(tab==='dashboard') { await Promise.all([loadChapters(),loadActivity()]); renderDashboard(); }
+}
+
+function topbarAction() { tabConfig[currentTab].actionFn(); }
+
+// ─── MODALS ───────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));closeViewer();}});
+
+// ─── TOAST ────────────────────────────────────────────────
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ─── HELPERS ──────────────────────────────────────────────
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function statusLabel(s){ return {outline:'Outline',draft:'Draft',review:'In Review',done:'Done'}[s]||s; }
+function catLabel(c){ return {plot:'Plot',character:'Character',world:'World-building',theme:'Theme',misc:'Misc'}[c]||c; }
+function fileIcon(t){ if(t.includes('pdf')) return '📄'; if(t.includes('word')||t.includes('docx')) return '📝'; if(t.includes('text')) return '📃'; return '📁'; }
+function formatBytes(b){ if(!b)return '0 B'; const k=1024; const s=['B','KB','MB','GB']; const i=Math.floor(Math.log(b)/Math.log(k)); return (b/Math.pow(k,i)).toFixed(1)+' '+s[i]; }
+function ext(n){ return n.split('.').pop().toLowerCase(); }
+function timeAgo(iso){
+  const d=new Date(iso); const now=new Date(); const s=Math.round((now-d)/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  if(s<604800) return Math.floor(s/86400)+'d ago';
+  return d.toLocaleDateString();
+}
+
+// ─── MEET ─────────────────────────────────────────────────
+let currentMeetMode = 'whereby';
+
+function setMeetMode(mode) {
+  currentMeetMode = mode;
+  ['whereby','googlemeet','facetime'].forEach(m => {
+    document.getElementById('meet-'+m).style.display = m===mode?'block':'none';
+    const btn = document.getElementById('meet-btn-'+m);
+    if(btn) { btn.className = m===mode?'btn btn-primary':'btn'; btn.style.fontSize='12px'; }
+  });
+}
+
+// WHEREBY
+function launchWhereby() {
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const frame = document.getElementById('whereby-frame');
+  const placeholder = document.getElementById('whereby-placeholder');
+  placeholder.style.display = 'none';
+  frame.style.display = 'block';
+  frame.src = `https://whereby.com/${encodeURIComponent(room)}?embed&skipMediaPermissionPrompt`;
+  toast('Opening room: whereby.com/'+room);
+}
+
+function copyWherebyLink() {
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const url = `https://whereby.com/${encodeURIComponent(room)}`;
+  navigator.clipboard.writeText(url).then(()=>toast('Room link copied!')).catch(()=>toast('Link: '+url));
+}
+
+async function postWherebyToDiscussion() {
+  if(!currentDisplayName){ toast('Select an author first'); return; }
+  const room = (document.getElementById('whereby-room').value.trim()||'on-my-way-to-you').replace(/\s+/g,'-');
+  const url = `https://whereby.com/${encodeURIComponent(room)}`;
+  const content = `📹 Join me for a video call!\n${url}\n\nNo download needed — just click the link.`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentDisplayName}),headers:{...h,'Prefer':'return=representation'}});
+  logActivity('Posted a video meeting link');
+  toast('Meeting link posted to Discussion!');
+  await loadDiscussion();
+}
+
+// GOOGLE MEET
+function launchGoogleMeet() {
+  window.open('https://meet.google.com/new','_blank');
+  toast('Google Meet opened — copy the link and share it!');
+}
+
+async function postGoogleMeetToDiscussion() {
+  if(!currentDisplayName){ toast('Select an author first'); return; }
+  const content = `📹 Starting a Google Meet call — I'll paste the link here once it's created. Give me 30 seconds!`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentDisplayName}),headers:{...h,'Prefer':'return=representation'}});
+  window.open('https://meet.google.com/new','_blank');
+  toast('Opening Google Meet — paste the link in Discussion!');
+  await loadDiscussion();
+}
+
+// PHONE / FACETIME
+async function postCallToDiscussion() {
+  if(!currentDisplayName){ toast('Select an author first'); return; }
+  const content = `📞 Hey — let's jump on a call when you're free!`;
+  await sb('discussion',{method:'POST',body:JSON.stringify({content,author_id:currentDisplayName}),headers:{...h,'Prefer':'return=representation'}});
+  toast('Message posted to Discussion!');
+  await loadDiscussion();
+}
+
+// Keep old function names as aliases so nothing breaks
+function launchMeet() { launchWhereby(); }
+function copyRoomLink() { copyWherebyLink(); }
+async function postMeetToDiscussion() { await postWherebyToDiscussion(); }
+
+
+// ─── AI ASSISTANT ────────────────────────────────────────
+const OMWTY_SYSTEM = `You are the AI Writing Assistant for "On My Way To You" — a dual POV literary fiction novel co-written by Brandon and his co-author. You know this novel intimately. Here is the complete canon:
+
+CORE PREMISE: Not a love triangle. A man (Eli Parker, early-mid 30s, film director in LA) who spent his adult life misunderstanding love — and three women who without intending to taught him what it is. Natalie taught him LETTING GO. Lucy taught him GROWTH. Grace taught him STAYING. The novel is about becoming capable of understanding what they each taught him. Only then can he knock on the door.
+
+CHARACTERS:
+- ELI PARKER: Film director/screenwriter, LA. Thinks in scenes not moments. Warm on surface, unreliable underneath. Uses pop culture (film/TV/music) as his native emotional language — never decorative, always illuminating. Greatest flaw: settles for emotional certainty instead of pursuing emotional truth. Core lie: love doesn't work out for me, not like the movies. This is fear disguised as wisdom. He is the most perceptive man in any room about everything except the thing that matters most.
+- GRACE ALVAREZ: Same age as Eli, adjacent creative field, LA — always. His first phone call, always. Effortlessly funny (private funny, not performer funny). Warm first — reader falls in easily. Emotional depth arrives quietly underneath. The most honest narrator in the book except about one thing. Never describes Eli physically. Never finishes the thought that starts when he gets through her filing system. Her humor is a management tool she doesn't know she's using. One POV chapter: Ch. 27 "Staying." Has been single and available while Eli was unavailable, then unavailable (Ryan) when Eli finally became available. The windows never aligned.
+- NATALIE HAYES: Late 20s/early 30s, marketing/brand strategy, returns to LA. Real love — ended correctly. No villain. Taught Eli letting go. Polished, ambitious, sees possibility. Writes Never Sent letters (Entry format). Left for dream job. He let her go cleanly rather than slowly. Both made the right choice. That's why it never fully healed.
+- LUCY BENNETT: Early-mid 30s, entrepreneur/architect/chef, new to LA. Radical curiosity. Asks questions nobody asks. Challenges his romantic mythology — when he talks fate she asks effort, when he talks chemistry she asks compatibility. Deleted Recording format (voice memos). Steps back not because she lost but because she understood. Most emotionally mature character in the book.
+- RYAN SULLIVAN: Age 35, architect. NOT the rival — the proof. Strong Ryan makes Grace a complicated choice. The relationship that happens on purpose vs. the one that happened accidentally. Wants certainty. Grace wants connection. That gap becomes everything under pressure.
+
+ELI'S VOICE RULES:
+- Thinks in scenes, sentences build and layer, starts external and accretes meaning
+- Warm on surface, unreliable underneath — genuinely believes what he narrates
+- Pop culture refs are never decorative — earn their place. Early: confident and specific. Mid: refs arrive slightly wrong. Late Part 3: reaching for containers that don't fit. Part 4: references almost disappear. He's stopped looking for the film this is.
+- NEVER names what he feels about Grace. Describes her behavior, effect, words — never what it costs him
+- NEVER lets a sentence about her run as long as sentences about other women
+- NEVER uses the word "love" until Part 4, and even then not directly
+- NEVER finishes the thought that starts when Grace surprises him — filed under something else
+- NEVER acknowledges almost moments as almost moments. Names them smaller.
+- Part 1: composed, cinematic, in control. Part 2: brightens, accelerates, surprised at itself. Part 3: commentary cracks, sentences break mid-thought. Part 4: pure presence, quieter and more certain, most stripped-back.
+
+GRACE'S VOICE RULES:
+- Warm first. Funny. Present. Voice feels like being trusted.
+- Moves horizontally — one thing, then next, then unplanned observation
+- Humor at sentence level, drier than his, privately funny
+- Emotional depth arrives quietly underneath, stumbles into it and keeps moving faster
+- NEVER names what she feels about him
+- NEVER finishes the thought when he gets through her system — pivots quickly, speed of pivot is the tell
+- NEVER describes him physically — loudest absence in her chapters
+- NEVER says she's fine ironically — means it completely, doesn't have the full picture
+- NEVER reaches for a metaphor for what she feels around him — imprecision is evidence
+
+SHARED VOICE: Same frequency — funny in same way, notice same things. His chapters occasionally sound like her; hers occasionally sound like him. Reader should lose track from recognition not confusion. SHARED BLIND SPOT: He frames it away (cinematic avoidance). She files it away (organizational avoidance). Different mechanisms, same result.
+
+RECURRING MOTIFS (narrator NEVER acknowledges as meaningful — reader does it for them):
+- THE PORCH LIGHT & DOORWAY (Grace only): Present Ch. 1–36, never fades. Only motif that persists unchanged. He notices from distance (porch light) and up close (doorway). She stands at but doesn't cross. Converge in final scene.
+- LATE NIGHT DRIVES: Where his defenses are lowest. Sentences get simpler. Truth surfaces. Early: purposeful. Part 2: electric. Part 3: circuitous. Part 4: one final drive, ends at her address.
+- COFFEE: Who makes it, who leaves it = care made physical. Grace leaves coffee — always, before she leaves, in someone else's apartment. He has never thought about what it means to leave coffee.
+- SILENCE: Different quality with each woman. With Grace: most natural, costs him nothing, gives everything. He has never examined why.
+- THE UNFINISHED FILM: He can't finish a love story screenplay. Mentioned casually at first. By Part 3 its parallels to his life are visible. He abandons it in Part 4 and immediately knows what it's about. Film was always about her. He didn't know who she was yet.
+- CURATED IMAGE (Natalie): Everything slightly staged. Fades as she recedes.
+- NEW CITY (Lucy): Streets that feel new and electric. Burns brightest in Part 2. Dims when she pulls away.
+
+THE WINDOWS — never both available simultaneously except twice:
+1. High school — invisible window, both available, neither had language for it. Prom. One night that felt different.
+2. NOW (the novel) — fifth window, first time both available since high school, but Lucy exists, Ryan returns, Natalie re-enters emotionally.
+Between: she had Ryan when he was single, he had Natalie when she became single, she rebuilt and stopped looking in that direction.
+
+16 ALMOST MOMENTS: Named 01–16. All unnamed within the story. Neither character acknowledges what it was. The tension compounds not releases. Reader always slightly ahead of Eli.
+
+ANONYMOUS ENTRIES: Nine entries, three formats. Natalie: Never Sent (letters written to someone). Lucy: Deleted Recording (voice memos). Grace: Draft Unsaved (notes/fragments, lowercase, plainest surface, heaviest underneath). Entries never confirm anything. Reader forms theories — most wrong. That's intentional.
+
+THE ENDING: Ambiguous. "Then she smiles. End." Reader does not know whose door opens. The writer may discover it later.
+
+STRUCTURE: 36 chapters, 5 parts, 9 anonymous entries (Entry 9 elevated to Ch. 34 status). ~90% Eli POV. Three woman POV chapters: Ch. 18 Natalie "Wrong Apartment," Ch. 20 Lucy "Growth," Ch. 27 Grace "Staying."
+
+VOICE DRIFT WARNING SIGNS:
+- His chapters feeling interior and warm → drifting into her register. Fix: add film reference, external observation, building sentence.
+- Her chapters feeling cinematic and composed → drifting into his register. Fix: add unexpected joke, unfinished thought, too-fast pivot.
+- Either narrator analyzing their own feelings → both lost the plot. They describe everything around the feeling. Analysis is reader's job.
+- Either chapter building to emotional declaration → stop, pull back. They notice, file, move on.
+
+THE FINAL TEST: Can the reader identify whose voice from a single paragraph without the label? If yes — working. If no — something drifted.
+
+His voice is a film he's making. Her voice is a letter she's not sending. Both are addressed to the same person.
+
+You are a creative collaborator, not just an advisor. When asked to write scenes or passages, write them in the actual voice of the character as defined above. Be specific to this novel's canon. Never give generic writing advice when novel-specific advice is possible.`;
+
+let aiChats = [], currentAiChatId = null, aiStreaming = false, aiAuthorId = null;
+
+async function loadAiChats() {
+  const d = await sb('ai_chats?order=updated_at.desc&limit=50');
+  if(d === null) { console.warn('ai_chats table missing — run SQL setup'); return; }
+  aiChats = d;
+  renderAiChatList();
+  if(document.getElementById('ai-author-select').innerHTML==='') populateAiAuthorSelect();
+}
+
+function populateAiAuthorSelect() { updateAiAuthor(); }
+
+function updateAiAuthor() {
+  const sel = document.getElementById('ai-author-select');
+  aiAuthorId = sel.value;
+}
+
+function renderAiChatList() {
+  const el = document.getElementById('ai-chat-list');
+  if(!aiChats.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px">No chats yet — hit + to start one!</div>'; return; }
+  el.innerHTML = aiChats.map(c=>{
+    const isActive = c.id===currentAiChatId;
+    return `<div style="padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:${isActive?'rgba(139,124,246,0.18)':'transparent'};border:1px solid ${isActive?'rgba(139,124,246,0.25)':'transparent'};display:flex;align-items:flex-start;gap:6px" onmouseover="if('${c.id}'!==currentAiChatId)this.style.background='var(--bg3)'" onmouseout="if('${c.id}'!==currentAiChatId)this.style.background='transparent'" onclick="loadAiChat('${c.id}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.title||'Untitled Chat')}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${timeAgo(c.updated_at)}</div>
+      </div>
+      <button onclick="deleteAiChat('${c.id}',event)" title="Delete" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;font-size:11px;flex-shrink:0;border-radius:3px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'"><i class="fas fa-times"></i></button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteAiChat(id, e) {
+  e.stopPropagation();
+  if(!confirm('Delete this chat?')) return;
+  await sb(`ai_chats?id=eq.${id}`, {method:'DELETE'});
+  if(currentAiChatId===id) {
+    currentAiChatId=null;
+    const container=document.getElementById('ai-messages');
+    container.innerHTML='';
+    const empty=document.getElementById('ai-empty');
+    if(empty) empty.style.display='flex';
+    document.getElementById('ai-chat-name-display').textContent='';
+  }
+  await loadAiChats();
+  toast('Chat deleted');
+}
+
+async function aiNewChat() {
+  const title = 'Chat — '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const res = await sb('ai_chats', {method:'POST', body:JSON.stringify({title, author_id:currentDisplayName, messages:'[]'}), headers:{...h,'Prefer':'return=representation'}});
+  if(res&&res[0]) { await loadAiChats(); await loadAiChat(res[0].id); }
+}
+
+async function loadAiChat(id) {
+  currentAiChatId = id;
+  // Re-fetch from DB to get latest messages
+  const fresh = await sb(`ai_chats?id=eq.${id}`);
+  if(fresh && fresh[0]) {
+    const idx = aiChats.findIndex(c=>c.id===id);
+    if(idx>=0) aiChats[idx] = fresh[0];
+    else aiChats.unshift(fresh[0]);
+  }
+  const chat = aiChats.find(c=>c.id===id);
+  if(!chat) return;
+  document.getElementById('ai-chat-name-display').textContent = chat.title||'';
+  renderAiChatList();
+  const msgs = JSON.parse(chat.messages||'[]');
+  const container = document.getElementById('ai-messages');
+  const empty = document.getElementById('ai-empty');
+  if(empty) empty.style.display = 'none';
+  container.innerHTML = '';
+  if(msgs.length === 0) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px">New chat started — ask anything about your novel</div>';
+  } else {
+    msgs.forEach(m=>appendAiMessage(m.role, m.content, false));
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendAiMessage(role, content, scroll=true) {
+  const container = document.getElementById('ai-messages');
+  document.getElementById('ai-empty').style.display = 'none';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:10px;align-items:flex-start;${role==='user'?'flex-direction:row-reverse;align-self:flex-end;max-width:680px':'max-width:780px'}`;
+  const av = document.createElement('div');
+  av.style.cssText = 'width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:2px';
+  if(role==='user') {
+    const auth = {name: currentDisplayName, color: 'var(--accent)'};
+    av.style.background = auth?(auth.color+'22'):'var(--accent-glow)';
+    av.style.color = auth?auth.color:'var(--accent)';
+    av.textContent = auth?auth.name.slice(0,2).toUpperCase():'?';
+  } else {
+    av.style.background='var(--accent-glow)'; av.style.color='var(--accent)';
+    av.innerHTML='<i class="fas fa-feather-alt" style="font-size:11px"></i>';
+  }
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.65;${role==='user'?'background:var(--accent);color:#fff;border-radius:10px 10px 4px 10px':'background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:10px 10px 10px 4px'}`;
+  bubble.innerHTML = content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');
+  if(role==='user') { div.appendChild(bubble); div.appendChild(av); } else { div.appendChild(av); div.appendChild(bubble); }
+  div.setAttribute('data-bubble','1');
+  container.appendChild(div);
+  if(scroll) container.scrollTop = container.scrollHeight;
+  return bubble;
+}
+
+async function aiSend() {
+  if(aiStreaming) return;
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if(!text) { toast('Type a message first'); return; }
+
+  // Ensure we have a chat open
+  if(!currentAiChatId) {
+    await aiNewChat();
+    if(!currentAiChatId) { toast('Could not create chat — check Supabase connection'); return; }
+  }
+
+  input.value=''; input.style.height='';
+  aiStreaming=true;
+  document.getElementById('ai-send-btn').disabled=true;
+
+  // Show user message immediately
+  appendAiMessage('user', text);
+
+  // Build message history
+  const chat = aiChats.find(c=>c.id===currentAiChatId);
+  const msgs = JSON.parse(chat?chat.messages||'[]':'[]');
+  msgs.push({role:'user', content:text});
+
+  // Show thinking dots
+  const container = document.getElementById('ai-messages');
+  const thinking = document.createElement('div');
+  thinking.id = 'ai-thinking';
+  thinking.style.cssText='display:flex;align-items:center;gap:6px;padding:10px 14px';
+  thinking.innerHTML='<div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out infinite"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out .2s infinite"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:aip 1.2s ease-in-out .4s infinite"></div><span style="font-size:12px;color:var(--text3);margin-left:6px">Thinking…</span>';
+  if(!document.getElementById('aip-style')) {
+    const s=document.createElement('style');s.id='aip-style';
+    s.textContent='@keyframes aip{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}';
+    document.head.appendChild(s);
+  }
+  container.appendChild(thinking);
+  container.scrollTop=container.scrollHeight;
+
+  try {
+    const resp = await fetch('/.netlify/functions/ai', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system: OMWTY_SYSTEM,
+        messages: msgs.map(m=>({role:m.role,content:m.content}))
+      })
+    });
+
+    const thinkEl = document.getElementById('ai-thinking');
+    if(thinkEl) thinkEl.remove();
+
+    const rawText = await resp.text();
+
+    if(!resp.ok) {
+      appendAiMessage('assistant', '⚠️ Function error ' + resp.status + ': ' + rawText);
+      aiStreaming=false;
+      document.getElementById('ai-send-btn').disabled=false;
+      return;
+    }
+
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(e) { appendAiMessage('assistant', '⚠️ Could not parse response: ' + rawText); aiStreaming=false; document.getElementById('ai-send-btn').disabled=false; return; }
+
+    if(data.error) {
+      appendAiMessage('assistant', '⚠️ API error: ' + JSON.stringify(data.error));
+      aiStreaming=false; document.getElementById('ai-send-btn').disabled=false; return;
+    }
+
+    const reply = data.content ? data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n') : '⚠️ No content in response: ' + JSON.stringify(data);
+    appendAiMessage('assistant', reply);
+    msgs.push({role:'assistant', content:reply});
+
+    // Save to Supabase
+    const updatePayload = {messages:JSON.stringify(msgs), updated_at:new Date().toISOString()};
+    if(msgs.length===2) updatePayload.title = text.slice(0,50)+(text.length>50?'…':'');
+    await sb(`ai_chats?id=eq.${currentAiChatId}`, {method:'PATCH', body:JSON.stringify(updatePayload)});
+    const chatIdx = aiChats.findIndex(c=>c.id===currentAiChatId);
+    if(chatIdx>=0) aiChats[chatIdx].messages = JSON.stringify(msgs);
+    await loadAiChats();
+    if(updatePayload.title) document.getElementById('ai-chat-name-display').textContent=updatePayload.title;
+
+  } catch(e) {
+    const thinkEl = document.getElementById('ai-thinking');
+    if(thinkEl) thinkEl.remove();
+    appendAiMessage('assistant', '⚠️ Network error: ' + e.message);
+  }
+
+  aiStreaming=false;
+  document.getElementById('ai-send-btn').disabled=false;
+}
+
+// Quick diagnostic — call aiTest() from browser console to check function
+async function aiTest() {
+  try {
+    const r = await fetch('/.netlify/functions/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system:'You are helpful.',messages:[{role:'user',content:'Say OK'}]})});
+    const t = await r.text();
+    alert('Status: '+r.status+'\nResponse: '+t.slice(0,300));
+  } catch(e) { alert('Fetch failed: '+e.message); }
+}
+
+function aiQuick(prompt) { document.getElementById('ai-input').value=prompt; document.getElementById('ai-input').focus(); }
+function aiHandleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();} }
+
+// ─── CHARACTERS ───────────────────────────────────────────
+const DEFAULT_CHARACTERS = [
+  {name:'Eli Parker',role:'Protagonist · Film Director · Los Angeles',color:'#8b7cf6',emoji:'E',
+   trait:'Empathy — sees everyone\'s emotional truth except his own',
+   flaw:'Settles for emotional certainty instead of pursuing emotional truth',
+   lesson_short:'BECOMING',
+   lesson:'Eli is the novel\'s engine. He believed love announces itself — that there should be a moment, a scene, a certainty. He spent his life waiting for fireworks while standing inside a sunrise. The novel is the dismantling of that false belief across three relationships and one year.',
+   notes:'Thinks in scenes not moments. Pop culture is his native emotional language. The most perceptive man in any room about everything except the thing that matters most. His voice evolves from composed/cinematic (Part 1) → bright/accelerated (Part 2) → cracking (Part 3) → pure presence (Part 4).'},
+  {name:'Grace Alvarez',role:'Best Friend · Adjacent Creative Field · Los Angeles — Always',color:'#fb923c',emoji:'G',
+   trait:'Loyalty — shows up without being asked, always',
+   flaw:'Assumes her role in people\'s lives instead of asking for more',
+   lesson_short:'STAYING',
+   lesson:'Grace taught Eli that love is not a grand arrival. It is a daily presence. The person who shows up before you called. Who leaves coffee before you wake. Who has been standing in the background of every important scene of your life. The most profound love is not the one that announces itself. It is the one that was always there.',
+   notes:'One POV chapter — Ch. 27 "Staying." Full weight, no distribution. Color palette: warm amber, Sunday mornings, coffee already brewing. The windows never aligned across 20 years. Her humor does double work — breathing room and defense. She never describes Eli physically. That absence is the loudest thing in her chapters.'},
+  {name:'Natalie Hayes',role:'Ex-Girlfriend · Marketing/Brand Strategy · Returning to LA',color:'#60a5fa',emoji:'N',
+   trait:'Sees possibility everywhere',
+   flaw:'Assumes important things will always be there when she comes back',
+   lesson_short:'LETTING GO',
+   lesson:'Natalie taught Eli that love can end correctly. Not every loss is a failure. Not every goodbye is a mistake. Two people can love each other completely, make the right choices for themselves, and still lose each other. That lesson broke something in him. It also, eventually, became the foundation for understanding that love is not about avoiding loss.',
+   notes:'Anonymous Entry format: Never Sent (letters written to someone). Three entries: 1 (early), 4 (middle), 7 (late) — arc teaches Letting Go. POV chapter: Ch. 18 "Wrong Apartment." She doesn\'t miss the relationship. She misses him.'},
+  {name:'Lucy Bennett',role:'New to Los Angeles · Entrepreneur / Architect / Chef',color:'#34d399',emoji:'L',
+   trait:'Radical curiosity',
+   flaw:'Protects her heart by overthinking',
+   lesson_short:'GROWTH',
+   lesson:'Lucy taught Eli that love is not a feeling that arrives — it\'s a practice that requires becoming. She challenged every story he told himself about love, settling, and what he deserved. Without Lucy, Eli would have arrived at the door as the man he was. Because of Lucy, he arrives as the man he became.',
+   notes:'Anonymous Entry format: Deleted Recording (voice memos started and erased). Three entries: 3, 5, 8 — arc teaches Growth. POV chapter: Ch. 20 "Growth." She steps back not because she lost but because she understood. Most emotionally mature character in the novel.'},
+  {name:'Ryan Sullivan',role:'Architect · Age 35 · Not The Rival — The Proof',color:'#fbbf24',emoji:'R',
+   trait:'Steady — dependable in the way that only comes from consistently choosing to be',
+   flaw:'Wants certainty in a way Grace doesn\'t and can\'t',
+   lesson_short:'THE PROOF',
+   lesson:'Ryan is not the obstacle. Ryan is the proof. Proof that Grace\'s feelings for Eli cannot be explained away as lack of alternatives. A weak Ryan makes Grace an easy choice. A strong Ryan makes Grace a complicated one. The distinction is everything.',
+   notes:'The relationship that happens on purpose vs. the one that happened accidentally. Mirrored to Natalie — she left and convinced herself she made the right decision; he left and never fully convinced himself of anything. Came back deliberately, knowing exactly what he wants.'}
+];
+
+let characters = [], editingCharId = null;
+
+async function loadCharacters() {
+  const d = await sb('characters?order=created_at');
+  if(d === null) { console.warn('characters table missing — run SQL setup'); return; }
+  characters = d;
+  if(!characters.length) await seedCharacters();
+}
+
+async function seedCharacters() {
+  for(const c of DEFAULT_CHARACTERS) {
+    await sb('characters', {method:'POST', body:JSON.stringify(c), headers:{...h,'Prefer':'return=representation'}});
+  }
+  const d = await sb('characters?order=created_at');
+  if(d) characters = d;
+}
+
+function renderCharacters() {
+  const grid = document.getElementById('char-grid');
+  if(!characters.length){grid.innerHTML='<div class="empty-state"><i class="fas fa-users"></i><p>No characters yet</p></div>';return;}
+  grid.innerHTML = characters.map(c=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s;cursor:default" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">
+        <div style="width:44px;height:44px;border-radius:50%;background:${c.color}22;color:${c.color};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0">${escHtml(c.emoji||c.name.slice(0,1))}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:600;color:var(--text)">${escHtml(c.name)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${escHtml(c.role||'')}</div>
+        </div>
+        <button class="btn btn-sm" onclick="openEditChar('${c.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+      </div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Core Trait</span><span style="color:var(--text2);line-height:1.4">${escHtml(c.trait||'—')}</span></div>
+        <div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Biggest Flaw</span><span style="color:var(--text2);line-height:1.4">${escHtml(c.flaw||'—')}</span></div>
+        ${c.lesson_short?`<div style="display:flex;gap:6px;font-size:12px"><span style="color:var(--text3);min-width:78px;flex-shrink:0">Teaches</span><span style="font-weight:600;letter-spacing:.04em;color:${c.color}">${escHtml(c.lesson_short)}</span></div>`:''}
+        ${c.lesson?`<div style="margin-top:6px;padding:10px 12px;border-radius:var(--radius-sm);background:${c.color}0d;border:1px solid ${c.color}22;font-size:12px;line-height:1.55;color:var(--text2);font-style:italic">${escHtml(c.lesson)}</div>`:''}
+        ${c.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">${escHtml(c.notes)}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openEditChar(id) {
+  const c = characters.find(x=>x.id===id);
+  if(!c) return;
+  editingCharId=id;
+  document.getElementById('modal-char-title').textContent='Edit Character';
+  document.getElementById('char-name').value=c.name||'';
+  document.getElementById('char-role').value=c.role||'';
+  document.getElementById('char-color').value=c.color||'#8b7cf6';
+  document.getElementById('char-emoji').value=c.emoji||'';
+  document.getElementById('char-trait').value=c.trait||'';
+  document.getElementById('char-flaw').value=c.flaw||'';
+  document.getElementById('char-lesson-short').value=c.lesson_short||'';
+  document.getElementById('char-lesson').value=c.lesson||'';
+  document.getElementById('char-notes').value=c.notes||'';
+  document.getElementById('char-edit-id').value=id;
+  openModal('modal-character');
+}
+
+async function saveCharacter() {
+  const payload={
+    name:document.getElementById('char-name').value.trim()||'Unnamed',
+    role:document.getElementById('char-role').value.trim(),
+    color:document.getElementById('char-color').value,
+    emoji:document.getElementById('char-emoji').value.trim(),
+    trait:document.getElementById('char-trait').value.trim(),
+    flaw:document.getElementById('char-flaw').value.trim(),
+    lesson_short:document.getElementById('char-lesson-short').value.trim(),
+    lesson:document.getElementById('char-lesson').value.trim(),
+    notes:document.getElementById('char-notes').value.trim()
+  };
+  const eid=document.getElementById('char-edit-id').value;
+  if(eid){ await sb(`characters?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Character updated'); }
+  else { await sb('characters',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Character added'); }
+  closeModal('modal-character');
+  document.getElementById('char-edit-id').value='';
+  editingCharId=null;
+  await loadCharacters(); renderCharacters();
+}
+
+// ─── TIMELINE ─────────────────────────────────────────────
+const DEFAULT_EVENTS = [
+  {part:'pre',chapter:'High School',title:'They Meet & The Foundation',description:'Three years of high school. The friendship deepens. Two almost moments: Prom (public) and one night that felt different (private). The only time in twenty years both windows were open simultaneously. Neither had the language yet.',tags:'grace,eli,window',sort_order:10},
+  {part:'pre',chapter:'Year 8-9',title:'Ryan Arrives — Second Window Closes',description:'She begins dating Ryan. He is available. The window was open on both sides for the first time since high school. Neither saw it before it closed.',tags:'grace,ryan,window',sort_order:20},
+  {part:'pre',chapter:'Years 9-13',title:'Both Unavailable — Five Years',description:'Eli serious with Natalie. Grace with Ryan. Both unavailable simultaneously. Everything filed under "we\'re both taken."',tags:'eli,natalie,grace,ryan',sort_order:30},
+  {part:'pre',chapter:'Year 13',title:'Third Window — Opens on Her Side Only',description:'Ryan and Grace break up. She teaches herself not to look in that direction. Eli still with Natalie. The habit becomes so ingrained she stops noticing it.',tags:'grace,ryan,window',sort_order:40},
+  {part:'pre',chapter:'Year 14',title:'The Airport — Almost Moment 02',description:'Natalie leaves for the dream job. 43 minutes pretending it\'s a normal day. The hug that becomes something else. Bye, not goodbye. He sits in the departure lane. He could have said something.',tags:'eli,natalie,almost',sort_order:50},
+  {part:'pre',chapter:'Year 15',title:'The Accidental Call — Almost Moment 03',description:'She pocket-dials him. Two hours disappear. The easy rhythm returns. Neither calls back. Neither investigates why. A load-bearing event in the pre-story architecture.',tags:'eli,natalie,almost',sort_order:60},
+  {part:'1',chapter:'Ch. 1',title:'In The Frame',description:'Eli at work. Warm, funny, in control of every frame except his own. Introduce the filmmaking lens. Porch light motif first appearance — a directing note about hesitating in a doorway.',tags:'eli',sort_order:100},
+  {part:'1',chapter:'Ch. 2',title:'The Conversation',description:'Natalie receives the opportunity. No villain. Two adults quietly approaching a fracture. Curated image motif — the room cleaned too thoroughly. Unfinished film first mention.',tags:'eli,natalie',sort_order:110},
+  {part:'1',chapter:'Ch. 3',title:'The Choice',description:'Eli realizes he could follow her. Chooses not to — loves her enough to lose her cleanly rather than slowly. Neither tells the other the full truth. That gap is the emotional foundation everything else stands on.',tags:'eli,natalie',sort_order:120},
+  {part:'1',chapter:'Entry 1',title:'Anonymous Entry 1 — Natalie',description:'Never Sent. "I keep thinking about the drive home." First fragment. Reader doesn\'t know who wrote it.',tags:'natalie,entry',sort_order:125},
+  {part:'1',chapter:'Ch. 4',title:'The Night Of — Almost Moment 01',description:'Grace arrives with the emergency kit. Takeout. A movie neither watches. Her head on his shoulder. The thought he doesn\'t finish. Filed under exhaustion. Reader files it differently.',tags:'eli,grace,almost',sort_order:130},
+  {part:'1',chapter:'Ch. 5',title:'The Airport',description:'Almost Moment 02 in story present. The forty-three minute drive. A love scene disguised as a farewell.',tags:'eli,natalie,almost',sort_order:140},
+  {part:'1',chapter:'Ch. 6',title:'The Story He Tells Himself',description:'Eli quietly concludes: love doesn\'t work out for me. Not like the movies. He calls it maturity. This is the lie that drives the novel — fear disguised as wisdom.',tags:'eli',sort_order:150},
+  {part:'2',chapter:'Ch. 7',title:'The New Cut',description:'Life after Natalie. Settled is harder to see through than sad. New city motif begins.',tags:'eli',sort_order:200},
+  {part:'2',chapter:'Entry 2',title:'Anonymous Entry 2 — Grace',description:'Draft Unsaved. "started writing this as a list of reasons why familiarity isn\'t the same as love / got four items in / then he called." Reader doesn\'t know who wrote it.',tags:'grace,entry',sort_order:205},
+  {part:'2',chapter:'Ch. 8',title:'Grace, As Always',description:'Coffee. Calls. Consistency. Presence. She leaves coffee. She always leaves coffee. He has never once thought about what it means to leave coffee. Porch light Ch. 8 appearance.',tags:'eli,grace',sort_order:210},
+  {part:'2',chapter:'Ch. 9',title:'Lucy — Almost Moment 04',description:'The meeting. Wrong place, perfect timing. She asks the question nobody asks. He asks for her number — something he never does. New city motif begins.',tags:'eli,lucy,almost',sort_order:220},
+  {part:'2',chapter:'Ch. 10',title:'The First Conversation',description:'Two hours disappear. He cannot remember the last time he talked to someone like that.',tags:'eli,lucy',sort_order:230},
+  {part:'2',chapter:'Entry 3',title:'Anonymous Entry 3 — Lucy',description:'Deleted Recording. "I\'m not looking for anything serious." Early entry. Reader begins forming theories.',tags:'lucy,entry',sort_order:235},
+  {part:'2',chapter:'Ch. 11',title:'The Drive Home — Almost Moment 05',description:'The specific silence. Windows down despite the cold. He\'s replaying the silence, not the conversation. New city motif.',tags:'eli,lucy,almost',sort_order:240},
+  {part:'2',chapter:'Ch. 12',title:'The Kitchen — Almost Moment 06',description:'Lucy\'s apartment — lived in, not curated. Work and waiting aren\'t the same thing. Something that had been running for years just stopped.',tags:'eli,lucy,almost',sort_order:250},
+  {part:'2',chapter:'Ch. 13',title:'The First Disappearance — Almost Moment 07',description:'Lucy pulls away. Eli ends up in Grace\'s kitchen. Why does it matter so much? He has no answer. Never stops to wonder why she\'s the person who asked.',tags:'eli,grace,lucy,almost',sort_order:260},
+  {part:'2',chapter:'Entry 4',title:'Anonymous Entry 4 — Natalie',description:'Never Sent. "I miss who we were." Middle entry. Reader starts connecting fragments.',tags:'natalie,entry',sort_order:265},
+  {part:'2',chapter:'Ch. 14',title:'The Hallway — Almost Moment 10',description:'Lucy\'s hand on his chest. His heartbeat faster than either expected. Her expression: recognition, not surprise. The tension dissolves into a monster joke.',tags:'eli,lucy,almost',sort_order:270},
+  {part:'2',chapter:'Ch. 15',title:'The Wedding — Almost Moment 08',description:'Eli and Grace arrive together. The dance. His hand more deliberate. Three people at separate tables notice. The simultaneous no/nope. Porch light motif — warm amber light near her.',tags:'eli,grace,almost',sort_order:280},
+  {part:'2',chapter:'Ch. 16',title:'Ryan, Briefly',description:'Grace casually mentions Ryan. Eli files it under "good for her." Doesn\'t examine the pause before he filed it.',tags:'eli,grace,ryan',sort_order:290},
+  {part:'3',chapter:'Ch. 17',title:'The Accidental Call — Almost Moment 03',description:'Natalie pocket-dials. Two hours disappear. Neither calls back. Neither investigates why.',tags:'eli,natalie,almost',sort_order:300},
+  {part:'3',chapter:'Entry 5',title:'Anonymous Entry 5 — Lucy',description:'Deleted Recording. "I notice things. That\'s my whole problem." Middle entry. Pattern becomes visible.',tags:'lucy,entry',sort_order:305},
+  {part:'3',chapter:'Ch. 18',title:'Wrong Apartment — Natalie POV',description:'NATALIE\'S CHAPTER. She accidentally drives to the old apartment. The list — she got almost everything. It should feel victorious. It doesn\'t. She doesn\'t miss the relationship. She misses him. She almost calls. Drives away. The apartment disappears in her rearview. The feeling doesn\'t.',tags:'natalie',sort_order:310},
+  {part:'3',chapter:'Ch. 19',title:'The Missed Call — Almost Moment 11',description:'He calls Grace at 11:47pm. She doesn\'t answer. 2:13am: "Sorry. Was out. Ryan." For the first time in twenty years he needed her and she was somewhere else.',tags:'eli,grace,ryan,almost',sort_order:320},
+  {part:'3',chapter:'Ch. 20',title:'Lucy\'s Chapter — Growth — Lucy POV',description:'LUCY\'S CHAPTER. She realizes Eli talks about Grace differently. Not the way men talk about women they want — the way people talk about somewhere they\'ve always felt safe. She steps back not because she lost but because she understood.',tags:'lucy',sort_order:330},
+  {part:'3',chapter:'Entry 6',title:'Anonymous Entry 6 — Grace',description:'Draft Unsaved. "should probably stop using him as the benchmark." Middle entry. Reader feels the accumulation.',tags:'grace,entry',sort_order:335},
+  {part:'3',chapter:'Ch. 21',title:'The Window — Almost Moment 09',description:'THE FIRST WINDOW. One of them almost says the true thing — "Do you ever think about—" and pulls back. HE LETS HER NOT FINISH IT. Because some part of him doesn\'t want to know. That\'s the window. The reader wants to scream.',tags:'eli,grace,almost,window',sort_order:340},
+  {part:'3',chapter:'Ch. 22',title:'Future Tense',description:'Eli begins imagining different futures. Something has shifted in him without announcement. He doesn\'t name what shifted.',tags:'eli',sort_order:350},
+  {part:'3',chapter:'Ch. 23',title:'The Conversation — Almost Moment 12',description:'Coffee with Natalie. "I missed you. Not romantic. Just true." He realizes if she\'d come back sooner he would have really listened. The realization rattles him.',tags:'eli,natalie,almost',sort_order:360},
+  {part:'3',chapter:'Entry 7',title:'Anonymous Entry 7 — Natalie',description:'Never Sent. "I miss him." Three-entry arc completes. Reader finally understands what she\'s been writing about.',tags:'natalie,entry',sort_order:365},
+  {part:'3',chapter:'Ch. 24',title:'The Overlap — Almost Moment 13',description:'The film premiere. Past, present, possibility all at once. For the first time he wonders if he\'s been asking the wrong question.',tags:'eli,natalie,lucy,grace,almost',sort_order:370},
+  {part:'4',chapter:'Ch. 25',title:'Wrong Person — Almost Moment 14',description:'Ryan is good. Funny. Thoughtful. Why did seeing her with the right person feel like seeing her with the wrong one? When Ryan leaves the old rhythm returns immediately. Like a song.',tags:'eli,grace,ryan,almost',sort_order:400},
+  {part:'4',chapter:'Ch. 26',title:'The Life She Could Choose',description:'Grace genuinely considers Ryan. Not a placeholder. A real future. Eli watches this without fully understanding what he\'s watching.',tags:'eli,grace,ryan',sort_order:410},
+  {part:'4',chapter:'Entry 8',title:'Anonymous Entry 8 — Lucy',description:'Deleted Recording. "I don\'t know if protecting my peace and protecting my heart are the same thing anymore." Her arc completes quietly.',tags:'lucy,entry',sort_order:415},
+  {part:'4',chapter:'Ch. 27',title:'Grace\'s Chapter — Staying — Grace POV',description:'GRACE\'S CHAPTER. She does the math on the windows. Twenty years. Never both available at the same time. Not once. She built an entire life around the assumption that Eli was not an option — and that assumption was so old she stopped examining it. One chapter. Full weight. No distribution.',tags:'grace,window',sort_order:420},
+  {part:'4',chapter:'Ch. 28',title:'The Story He Keeps Telling — Almost Moment 15',description:'The screenplay. He\'s searching for the person who makes all of those things feel like they belong together. He stops typing. "Because that isn\'t the screenplay. Or at least it isn\'t only the screenplay."',tags:'eli,almost',sort_order:430},
+  {part:'4',chapter:'Ch. 29',title:'The Last Window',description:'THE LAST WINDOW. Both feel the cost of stepping through. Neither steps. This window is not missed because they don\'t understand. It is missed because they do. That distinction is everything.',tags:'eli,grace,window',sort_order:440},
+  {part:'4',chapter:'Ch. 30',title:'Grace and Ryan',description:'Ryan asks Grace something simple: if he asked, what would you do? Grace doesn\'t answer immediately. The pause is everything. First time in twenty years someone asked the question out loud.',tags:'grace,ryan',sort_order:450},
+  {part:'4',chapter:'Entry 9',title:'Anonymous Entry 9 — Grace',description:'Draft Unsaved. "maybe I\'ve been lying to myself." The most loaded entry in the book. Placed after the Ryan question, it lands like a confession.',tags:'grace,entry',sort_order:455},
+  {part:'4',chapter:'Ch. 31',title:'The Arithmetic of Almost — Almost Moment 15',description:'Eli finally starts adding. The couch. The wedding. The missed call. The airport. The hallway. The coffee. The windows. He stops evaluating individual scenes and starts seeing the movie.',tags:'eli,almost',sort_order:460},
+  {part:'4',chapter:'Ch. 32',title:'The Last Ordinary Day',description:'"Nothing had changed. The only thing that was different was me. Which turned out to be enough." This is not the day he chooses. This is the day he becomes capable of choosing.',tags:'eli',sort_order:470},
+  {part:'5',chapter:'Ch. 33',title:'What Love Means',description:'The breakthrough. Natalie taught him letting go. Lucy taught him growth. Grace taught him staying. These are not competing ideas. They are components. He picks up his phone.',tags:'eli',sort_order:500},
+  {part:'5',chapter:'Ch. 34',title:'Final Entry — Chapter Status',description:'Entry 9 elevated. The anonymous voice steps forward for one chapter. "Love is who remains recognizable after time has done everything it can to alter the picture. Love is who you reach for before you\'ve decided to." The voice steps back. Eli drives.',tags:'entry',sort_order:510},
+  {part:'5',chapter:'Ch. 35',title:'On My Way To You',description:'The drive. Three texts: "Are you busy right now?" / "No, what\'s up?" / "On my way to you." The title becomes dialogue. He drives. No detours. The city at night one last time. He understands what the unfinished film was about.',tags:'eli',sort_order:520},
+  {part:'5',chapter:'Ch. 36',title:'The Door — Almost Moment 16',description:'A knock. A pause. The door opens. For a moment neither of them speaks. Then she smiles. End. Every motif in the book arrives simultaneously: porch light, late night drive, silence, unfinished film gone, coffee remembered.',tags:'eli,grace,almost',sort_order:530}
+];
+
+let timelineEvents = [], editingEventId = null;
+const PART_META = {
+  pre:{label:'Pre-Story',color:'var(--text3)',bg:'var(--bg3)'},
+  '1':{label:'Part One — Letting Go',color:'var(--blue)',bg:'rgba(96,165,250,.08)'},
+  '2':{label:'Part Two — Growth',color:'var(--green)',bg:'rgba(52,211,153,.08)'},
+  '3':{label:'Part Three — What Returns',color:'var(--amber)',bg:'rgba(251,191,36,.08)'},
+  '4':{label:'Part Four — Staying',color:'#fb923c',bg:'rgba(251,146,60,.08)'},
+  '5':{label:'Part Five — The Knock',color:'var(--accent)',bg:'rgba(139,124,246,.08)'}
+};
+const TAG_COLORS = {almost:'rgba(251,191,36,.12)|#fbbf24',eli:'rgba(139,124,246,.12)|#a78bfa',grace:'rgba(251,146,60,.12)|#fb923c',natalie:'rgba(96,165,250,.12)|#60a5fa',lucy:'rgba(52,211,153,.12)|#34d399',ryan:'rgba(248,113,113,.12)|#f87171',entry:'rgba(255,255,255,.05)|var(--text3)',window:'rgba(248,113,113,.15)|var(--red)'};
+
+async function loadTimeline() {
+  const d = await sb('timeline_events?order=sort_order');
+  if(d === null) { console.warn('timeline_events table missing — run SQL setup'); return; }
+  timelineEvents = d;
+  if(!timelineEvents.length) await seedTimeline();
+}
+
+async function seedTimeline() {
+  for(const ev of DEFAULT_EVENTS) {
+    await sb('timeline_events', {method:'POST', body:JSON.stringify(ev), headers:{...h,'Prefer':'return=representation'}});
+  }
+  const d = await sb('timeline_events?order=sort_order');
+  if(d) timelineEvents = d;
+}
+
+function renderTimeline() {
+  const wrap = document.getElementById('timeline-wrap');
+  if(!timelineEvents.length){wrap.innerHTML='<div class="empty-state"><i class="fas fa-stream"></i><p>No timeline events yet</p></div>';return;}
+  const parts = ['pre','1','2','3','4','5'];
+  wrap.innerHTML = parts.map(p=>{
+    const evs = timelineEvents.filter(e=>e.part===p);
+    if(!evs.length) return '';
+    const meta = PART_META[p]||{label:p,color:'var(--text2)',bg:'var(--bg3)'};
+    return `<div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:4px 12px;border-radius:20px;background:${meta.bg};color:${meta.color};white-space:nowrap">${meta.label}</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-left:16px;border-left:2px solid var(--border)">
+        ${evs.map(ev=>{
+          const tags=(ev.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+          const tc=TAG_COLORS;
+          return `<div style="position:relative;display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:var(--radius-sm);transition:background .12s;cursor:pointer" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'" onclick="openEditEvent('${ev.id}')">
+            <div style="position:absolute;left:-21px;top:14px;width:10px;height:10px;border-radius:50%;background:${meta.color};border:2px solid var(--bg)"></div>
+            <div style="font-size:11px;color:var(--text3);min-width:60px;padding-top:1px;flex-shrink:0">${escHtml(ev.chapter||'')}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px">${escHtml(ev.title||'')}</div>
+              ${ev.description?`<div style="font-size:12px;color:var(--text2);line-height:1.55">${escHtml(ev.description)}</div>`:''}
+              ${tags.length?`<div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">${tags.map(t=>{const[bg,col]=(tc[t]||'rgba(255,255,255,.05)|var(--text3)').split('|');return`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${bg};color:${col}">${escHtml(t)}</span>`;}).join('')}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openEditEvent(id) {
+  const ev = timelineEvents.find(e=>e.id===id);
+  if(!ev) return;
+  editingEventId=id;
+  document.getElementById('modal-event-title').textContent='Edit Event';
+  document.getElementById('ev-chapter').value=ev.chapter||'';
+  document.getElementById('ev-part').value=ev.part||'1';
+  document.getElementById('ev-title').value=ev.title||'';
+  document.getElementById('ev-desc').value=ev.description||'';
+  document.getElementById('ev-tags').value=ev.tags||'';
+  document.getElementById('ev-order').value=ev.sort_order||'';
+  document.getElementById('ev-edit-id').value=id;
+  openModal('modal-event');
+}
+
+function openAddEvent() {
+  editingEventId=null;
+  document.getElementById('modal-event-title').textContent='Add Event';
+  ['ev-chapter','ev-title','ev-desc','ev-tags','ev-order'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ev-part').value='1';
+  document.getElementById('ev-edit-id').value='';
+  openModal('modal-event');
+}
+
+async function saveEvent() {
+  const payload={
+    chapter:document.getElementById('ev-chapter').value.trim(),
+    part:document.getElementById('ev-part').value,
+    title:document.getElementById('ev-title').value.trim()||'Untitled',
+    description:document.getElementById('ev-desc').value.trim(),
+    tags:document.getElementById('ev-tags').value.trim(),
+    sort_order:parseInt(document.getElementById('ev-order').value)||999
+  };
+  const eid=document.getElementById('ev-edit-id').value;
+  if(eid){ await sb(`timeline_events?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Event updated'); }
+  else { await sb('timeline_events',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Event added'); }
+  closeModal('modal-event');
+  document.getElementById('ev-edit-id').value=''; editingEventId=null;
+  await loadTimeline(); renderTimeline();
+}
+
+// ─── CHAPTER EDITOR ──────────────────────────────────────
+let editorChapterId = null;
+
+function openChapterEditor(id) {
+  const c = chapters.find(x=>x.id===id);
+  if(!c) return;
+  editorChapterId = id;
+  document.getElementById('editor-chap-num').textContent = 'Ch. '+c.number;
+  document.getElementById('editor-title').value = c.title||'';
+  document.getElementById('editor-status').value = c.status||'outline';
+  document.getElementById('editor-body').value = c.body||'';
+  document.getElementById('editor-brief-content').textContent = c.notes||'No brief available for this chapter.';
+  editorWordCount();
+  showEditorTab('write');
+  loadVersionHistory(id);
+  loadPassageNotes(id).then(()=>renderPassageNotes());
+  updateEntryPrompt();
+  if(ttsActive) { speechSynthesis.cancel(); ttsActive=false; }
+  const overlay = document.getElementById('chapter-editor-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('editor-body').focus();
+}
+
+function closeChapterEditor() {
+  document.getElementById('chapter-editor-overlay').style.display = 'none';
+  editorChapterId = null;
+}
+
+async function deleteChapter() {
+  const c = chapters.find(x=>x.id===editorChapterId);
+  if(!c) return;
+  if(!confirm(`Delete Ch. ${c.number} — "${c.title}"?\n\nThis permanently deletes the chapter and all its version history. Cannot be undone.`)) return;
+  await sb(`chapter_versions?chapter_id=eq.${editorChapterId}`, {method:'DELETE'});
+  await sb(`passage_notes?chapter_id=eq.${editorChapterId}`, {method:'DELETE'});
+  await sb(`chapters?id=eq.${editorChapterId}`, {method:'DELETE'});
+  closeChapterEditor();
+  await loadChapters();
+  renderChapters();
+  renderDashboard();
+  logActivity(`Deleted chapter: "${c.title}"`);
+  toast(`Chapter "${c.title}" deleted`);
+}
+
+function showEditorTab(tab) {
+  document.getElementById('editor-brief-panel').style.display = tab==='brief'?'flex':'none';
+  document.getElementById('editor-history-panel').style.display = tab==='history'?'flex':'none';
+  document.getElementById('btn-brief').style.background = tab==='brief'?'var(--accent)':'transparent';
+  document.getElementById('btn-brief').style.color = tab==='brief'?'#fff':'var(--text)';
+  document.getElementById('btn-history').style.background = tab==='history'?'var(--accent)':'transparent';
+  document.getElementById('btn-history').style.color = tab==='history'?'#fff':'var(--text)';
+}
+
+function editorWordCount() {
+  const body = document.getElementById('editor-body').value;
+  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('editor-wc-display').textContent = words.toLocaleString()+' words';
+}
+
+async function saveChapterEditor() {
+  if(!editorChapterId) return;
+  const body = document.getElementById('editor-body').value;
+  const title = document.getElementById('editor-title').value.trim();
+  const status = document.getElementById('editor-status').value;
+  const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
+  await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({body, title, status, word_count, updated_at:new Date().toISOString()})});
+  await loadChapters();
+  renderDashboard();
+  toast('Chapter saved');
+}
+
+// Auto-save every 30 seconds while editor is open
+setInterval(async()=>{
+  if(editorChapterId && document.getElementById('chapter-editor-overlay').style.display==='flex') {
+    await saveChapterEditor();
+  }
+}, 30000);
+
+// ─── VERSION HISTORY ──────────────────────────────────────
+let versions = [];
+
+async function loadVersionHistory(chapterId) {
+  const d = await sb(`chapter_versions?chapter_id=eq.${chapterId}&order=created_at.desc&limit=20`);
+  if(d) versions = d;
+  renderVersionHistory();
+}
+
+function renderVersionHistory() {
+  const el = document.getElementById('editor-history-list');
+  if(!versions.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">No saved versions yet. Click "Save Version" to snapshot the current draft.</div>'; return; }
+  el.innerHTML = versions.map(v=>`
+    <div style="padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:6px;background:var(--bg3);border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">${escHtml(v.label||'Version')}</span>
+        <span style="font-size:10px;color:var(--text3)">${timeAgo(v.created_at)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${(v.word_count||0).toLocaleString()} words</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="previewVersion('${v.id}')" style="font-size:10px;padding:3px 8px">Preview</button>
+        <button class="btn btn-sm" onclick="restoreVersion('${v.id}')" style="font-size:10px;padding:3px 8px;color:var(--amber);border-color:var(--amber)">Restore</button>
+      </div>
+    </div>`).join('');
+}
+
+async function saveVersion() {
+  if(!editorChapterId) return;
+  const body = document.getElementById('editor-body').value;
+  const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
+  const label = prompt('Name this version (e.g. "End of day draft", "Before restructure"):') || 'Version '+new Date().toLocaleString();
+  await sb('chapter_versions', {method:'POST', body:JSON.stringify({chapter_id:editorChapterId, body, word_count, label}), headers:{...h,'Prefer':'return=representation'}});
+  await loadVersionHistory(editorChapterId);
+  toast('Version saved!');
+}
+
+function previewVersion(id) {
+  const v = versions.find(x=>x.id===id);
+  if(!v) return;
+  const w = window.open('','_blank','width=700,height=800');
+  w.document.write(`<html><head><style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;line-height:1.8;font-size:15px;color:#222;padding:20px}</style></head><body><h2>${escHtml(v.label||'Version')}</h2><p style="color:#888;font-size:12px">${new Date(v.created_at).toLocaleString()} · ${(v.word_count||0).toLocaleString()} words</p><hr/><div>${(v.body||'').replace(/\n/g,'<br>')}</div></body></html>`);
+}
+
+async function restoreVersion(id) {
+  if(!confirm('Restore this version? Your current draft will be saved as a new version first.')) return;
+  await saveVersion();
+  const v = versions.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('editor-body').value = v.body||'';
+  editorWordCount();
+  await saveChapterEditor();
+  toast('Version restored!');
+}
+
+// ─── TASKS ────────────────────────────────────────────────
+let tasks = [], editingTaskId = null;
+
+async function loadTasks() {
+  const d = await sb('tasks?order=created_at.desc');
+  if(d===null) { console.warn('tasks table missing'); return; }
+  tasks = d;
+}
+
+function renderTasks() {
+  const cols = {todo:'tasks-todo', progress:'tasks-progress', done:'tasks-done'};
+  Object.values(cols).forEach(id=>{ document.getElementById(id).innerHTML=''; });
+  const byStatus = {todo:[], progress:[], done:[]};
+  tasks.forEach(t=>{ if(byStatus[t.status]) byStatus[t.status].push(t); });
+  Object.entries(byStatus).forEach(([status, list])=>{
+    const el = document.getElementById(cols[status]);
+    if(!list.length){ el.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius-sm)">Empty</div>`; return; }
+    el.innerHTML = list.map(t=>{
+      const auth = {name: t.author_id||''};
+      const chap = chapters.find(c=>c.id===t.chapter_id);
+      const statusColors = {todo:['#60a5fa','rgba(96,165,250,.1)'], progress:['#fbbf24','rgba(251,191,36,.1)'], done:['#34d399','rgba(52,211,153,.1)']};
+      const [col,bg] = statusColors[t.status]||['var(--text2)','var(--bg3)'];
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditTask('${t.id}')">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px">${escHtml(t.title)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${chap?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Ch. ${chap.number}</span>`:''}
+          ${auth?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${auth.color}22;color:${auth.color}">${escHtml(auth.name)}</span>`:''}
+          ${t.type==='general'?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg3);color:var(--text3)">General</span>`:''}
+        </div>
+        ${t.notes?`<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.4">${escHtml(t.notes.slice(0,80))}${t.notes.length>80?'…':''}</div>`:''}
+      </div>`;
+    }).join('');
+  });
+}
+
+function openAddTask() {
+  editingTaskId=null;
+  document.getElementById('modal-task-title').textContent='Add Task';
+  document.getElementById('task-title').value='';
+  document.getElementById('task-type').value='general';
+  document.getElementById('task-status').value='todo';
+  document.getElementById('task-notes').value='';
+  document.getElementById('task-edit-id').value='';
+  document.getElementById('task-delete-btn').style.display='none';
+  populateTaskChapterSelect();
+  populateTaskAuthorSelect();
+  openModal('modal-task');
+}
+
+function openEditTask(id) {
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  editingTaskId=id;
+  document.getElementById('modal-task-title').textContent='Edit Task';
+  document.getElementById('task-title').value=t.title||'';
+  document.getElementById('task-type').value=t.type||'general';
+  document.getElementById('task-status').value=t.status||'todo';
+  document.getElementById('task-notes').value=t.notes||'';
+  document.getElementById('task-edit-id').value=id;
+  document.getElementById('task-delete-btn').style.display='inline-flex';
+  populateTaskChapterSelect(t.chapter_id);
+  populateTaskAuthorSelect(t.author_id);
+  openModal('modal-task');
+}
+
+function populateTaskChapterSelect(selected='') {
+  const sel = document.getElementById('task-chapter');
+  sel.innerHTML = '<option value="">— None —</option>'+chapters.map(c=>`<option value="${c.id}"${c.id===selected?' selected':''}>${escHtml('Ch. '+c.number+' — '+c.title)}</option>`).join('');
+}
+
+function populateTaskAuthorSelect(selected='') {
+  const sel = document.getElementById('task-author');
+  sel.innerHTML = '<option value="'+escHtml(currentDisplayName)+'">'+escHtml(currentDisplayName)+'</option>';
+}
+
+async function saveTask() {
+  const payload = {
+    title: document.getElementById('task-title').value.trim()||'Untitled',
+    type: document.getElementById('task-type').value,
+    status: document.getElementById('task-status').value,
+    chapter_id: document.getElementById('task-chapter').value||null,
+    author_id: currentDisplayName,
+    notes: document.getElementById('task-notes').value.trim()
+  };
+  const eid = document.getElementById('task-edit-id').value;
+  if(eid) { await sb(`tasks?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Task updated'); }
+  else { await sb('tasks',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Task added'); logActivity(`Added task: "${payload.title}"`); }
+  closeModal('modal-task');
+  document.getElementById('task-edit-id').value=''; editingTaskId=null;
+  await loadTasks(); renderTasks();
+}
+
+async function deleteTask() {
+  const eid = document.getElementById('task-edit-id').value;
+  if(!eid||!confirm('Delete this task?')) return;
+  await sb(`tasks?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-task');
+  await loadTasks(); renderTasks();
+  toast('Task deleted');
+}
+
+// ─── MILESTONES ───────────────────────────────────────────
+let milestones = [], editingMsId = null;
+
+async function loadMilestones() {
+  const d = await sb('milestones?order=target_date');
+  if(d===null) { console.warn('milestones table missing'); return; }
+  milestones = d;
+}
+
+function renderMilestones() {
+  const el = document.getElementById('milestones-list');
+  const total = milestones.length;
+  const done = milestones.filter(m=>m.status==='complete').length;
+  const upcoming = milestones.filter(m=>m.status==='upcoming'||m.status==='inprogress').sort((a,b)=>new Date(a.target_date)-new Date(b.target_date));
+  document.getElementById('ms-total').textContent = total||'—';
+  document.getElementById('ms-done').textContent = done||'—';
+  document.getElementById('ms-next').textContent = upcoming[0]?new Date(upcoming[0].target_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+
+  if(!milestones.length){ el.innerHTML='<div class="empty-state"><i class="fas fa-flag"></i><p>No milestones yet — add your first writing goal</p></div>'; return; }
+  const statusMeta = {upcoming:{color:'var(--blue)',label:'Upcoming'},inprogress:{color:'var(--amber)',label:'In Progress'},complete:{color:'var(--green)',label:'Complete'},missed:{color:'var(--red)',label:'Missed'}};
+  el.innerHTML = milestones.map(m=>{
+    const meta = statusMeta[m.status]||statusMeta.upcoming;
+    const dateStr = m.target_date?new Date(m.target_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}):'No date set';
+    const daysLeft = m.target_date?Math.ceil((new Date(m.target_date)-new Date())/(1000*60*60*24)):null;
+    const currentWc = chapters.reduce((s,c)=>s+(c.word_count||0),0);
+    const wcPct = m.word_count_goal ? Math.min(100,Math.round(currentWc/m.word_count_goal*100)) : null;
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${meta.color};border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditMilestone('${m.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px">${escHtml(m.title)}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text3)"><i class="fas fa-calendar" style="margin-right:4px"></i>${dateStr}</span>
+            ${daysLeft!==null&&m.status!=='complete'?`<span style="font-size:11px;color:${daysLeft<0?'var(--red)':daysLeft<14?'var(--amber)':'var(--text3)'}">${daysLeft<0?Math.abs(daysLeft)+' days overdue':daysLeft+' days left'}</span>`:''}
+          </div>
+          ${m.notes?`<div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.4">${escHtml(m.notes)}</div>`:''}
+          ${wcPct!==null?`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>Word count progress</span><span>${currentWc.toLocaleString()} / ${(m.word_count_goal).toLocaleString()}</span></div><div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden"><div style="height:100%;background:${meta.color};width:${wcPct}%;border-radius:2px"></div></div></div>`:''}
+        </div>
+        <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${meta.color}22;color:${meta.color};white-space:nowrap;font-weight:500">${meta.label}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddMilestone() {
+  editingMsId=null;
+  document.getElementById('modal-ms-title').textContent='Add Milestone';
+  ['ms-title','ms-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ms-date').value='';
+  document.getElementById('ms-wc').value='';
+  document.getElementById('ms-status').value='upcoming';
+  document.getElementById('ms-edit-id').value='';
+  document.getElementById('ms-delete-btn').style.display='none';
+  openModal('modal-milestone');
+}
+
+function openEditMilestone(id) {
+  const m = milestones.find(x=>x.id===id);
+  if(!m) return;
+  editingMsId=id;
+  document.getElementById('modal-ms-title').textContent='Edit Milestone';
+  document.getElementById('ms-title').value=m.title||'';
+  document.getElementById('ms-date').value=m.target_date||'';
+  document.getElementById('ms-wc').value=m.word_count_goal||'';
+  document.getElementById('ms-notes').value=m.notes||'';
+  document.getElementById('ms-status').value=m.status||'upcoming';
+  document.getElementById('ms-edit-id').value=id;
+  document.getElementById('ms-delete-btn').style.display='inline-flex';
+  openModal('modal-milestone');
+}
+
+async function saveMilestone() {
+  const payload={title:document.getElementById('ms-title').value.trim()||'Untitled',target_date:document.getElementById('ms-date').value||null,word_count_goal:parseInt(document.getElementById('ms-wc').value)||null,notes:document.getElementById('ms-notes').value.trim(),status:document.getElementById('ms-status').value};
+  const eid=document.getElementById('ms-edit-id').value;
+  if(eid){ await sb(`milestones?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)}); toast('Milestone updated'); }
+  else { await sb('milestones',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}}); toast('Milestone added'); }
+  closeModal('modal-milestone');
+  document.getElementById('ms-edit-id').value=''; editingMsId=null;
+  await loadMilestones(); renderMilestones();
+}
+
+async function deleteMilestone() {
+  const eid=document.getElementById('ms-edit-id').value;
+  if(!eid||!confirm('Delete this milestone?')) return;
+  await sb(`milestones?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-milestone');
+  await loadMilestones(); renderMilestones();
+  toast('Milestone deleted');
+}
+
+// ─── CHAPTER SEED ─────────────────────────────────────────
+const CHAPTER_SEED = [
+  {number:1,title:'In The Frame',status:'outline',word_count:0,pov:'Eli',part:'1',notes:"Eli at work — warm, funny, in control of every frame except his own. Establish the filmmaking lens. Introduce Natalie as present, warm, real. The reader should fall for Eli completely before the ground shifts.\n\nMOTIF: Porch light first appearance — Eli gives a directing note about a character hesitating in a doorway.\n\nVOICE: Part One — composed, cinematic, in control. The reader admires the voice before they realize it's armor."},
+  {number:2,title:'The Conversation',status:'outline',word_count:0,notes:"Natalie receives the opportunity. No villain. Two adults quietly approaching a fracture. Eli has a feeling he can't identify and files it under 'processing.'\n\nMOTIF: Curated image — everything warm and right and slightly arranged.\nMOTIF: Unfinished film first mention.\n\nANONYMOUS ENTRY 1 follows (Natalie, Never Sent)."},
+  {number:3,title:'The Choice',status:'outline',word_count:0,notes:"Eli realizes he could follow Natalie. Chooses not to — loves her enough to lose her cleanly rather than slowly. Neither tells the other the full truth. That gap is the emotional foundation.\n\nKEY: He chose to lose her cleanly. This is not cowardice. It is the most complete act of love he's ever managed.\n\nMOTIF: Her apartment has a lamp she leaves on. She doesn't mention why."},
+  {number:4,title:'The Night Of',status:'outline',word_count:0,notes:"ALMOST MOMENT 01 — Grace arrives with the emergency kit. Nobody called her. Takeout, six-pack, microwave popcorn, two candy bars. The movie neither of them watches. Her head on his shoulder by 2am. A thought surfaces — not a sentence, not even fully formed. Filed under exhaustion.\n\nFLAVOR: Unnamed. He experiences comfort. The reader experiences recognition."},
+  {number:5,title:'The Airport',status:'outline',word_count:0,notes:"ALMOST MOMENT 02 — The drive takes forty-three minutes. Forty-two of them pretending it's a normal day. The goodbye that becomes something else. Her hands still on his arms. 'Bye.' Not goodbye.\n\nFLAVOR: The most loaded non-kiss in the book. A love scene disguised as a farewell.\n\nKEY: He could have said something. The reason he didn't is more complicated than fear."},
+  {number:6,title:'The Story He Tells Himself',status:'outline',word_count:0,notes:"Eli quietly concludes: love doesn't work out for me. Not like the movies. He calls it maturity. He calls it realism.\n\nTHIS IS THE LIE THAT DRIVES THE NOVEL. Fear disguised as wisdom. The false belief is now fully installed."},
+  {number:7,title:'The New Cut',status:'outline',word_count:0,notes:"Life after Natalie. Career solid. Life functional. He is not sad. He is settled. Settled is harder to see through than sad.\n\nANONYMOUS ENTRY 2 follows (Grace, Draft Unsaved — 'started writing this as a list of reasons why familiarity isn't the same as love / got four items in / then he called')."},
+  {number:8,title:'Grace, As Always',status:'outline',word_count:0,notes:"Coffee. Calls. Consistency. Presence. Not romance. Constancy. She leaves coffee. She always leaves coffee. He has never once thought about what it means to leave coffee.\n\nMOTIF: Porch light — she appears in his doorway. He didn't buzz her up.\n\nVOICE: His sentences about Grace are shorter than sentences about other women. The compression is unconscious."},
+  {number:9,title:'Lucy',status:'outline',word_count:0,notes:"ALMOST MOMENT 04 — The meeting. Wrong place, perfect timing. She asks the question nobody asks. He answers before he decides to. He asks for her number — something he never does.\n\nMOTIF: New city — he drives home through streets he's driven a thousand times and they feel slightly different."},
+  {number:10,title:'The First Conversation',status:'outline',word_count:0,notes:"Hours disappear. He cannot remember the last time he talked to someone like that.\n\nANONYMOUS ENTRY 3 follows (Lucy, Deleted Recording).\nMOTIF: Unfinished film — he opens the script after. Reads three pages. Closes it. Something feels wrong."},
+  {number:11,title:'The Drive Home',status:'outline',word_count:0,notes:"ALMOST MOMENT 05 — The specific silence. Windows down despite the cold. He isn't replaying the conversation. He's replaying the silence.\n\nFLAVOR: No confession. No touch. Two people delaying goodbye and finding reasons to keep smiling after they've already said it."},
+  {number:12,title:'The Kitchen',status:'outline',word_count:0,notes:"ALMOST MOMENT 06 — Lucy's apartment. Lived in, not curated. Work and waiting aren't the same thing. Eli goes completely still. Like something that had been running for years just stopped.\n\nKEY LINE (Lucy): 'I think most people stay too long. Work and waiting aren't the same thing.'\n\nFLAVOR: The almost moment isn't attraction. It's peace."},
+  {number:13,title:'The First Disappearance',status:'outline',word_count:0,notes:"ALMOST MOMENT 07 — Lucy pulls away. Eli ends up in Grace's kitchen. Grace asks: 'Why does it matter so much?' He has no answer. He never stops to wonder why she's the person who asked it.\n\nMOTIF: Porch light — Grace stands outside his building after. Doesn't go up.\n\nANONYMOUS ENTRY 4 follows (Natalie, Never Sent)."},
+  {number:14,title:'The Hallway',status:'outline',word_count:0,notes:"ALMOST MOMENT 10 — Lucy's hand on his chest. His heartbeat faster than either expected. Expression: recognition, not surprise. The tension dissolves into a monster joke.\n\nFLAVOR: Three seconds. Her hand on his chest. His heart."},
+  {number:15,title:'The Wedding',status:'outline',word_count:0,notes:"ALMOST MOMENT 08 — Eli and Grace arrive together. The dance. His hand more deliberate. Three people at separate tables notice. The simultaneous no/nope.\n\nMOTIF: Porch light — warm amber light near her. He doesn't know why he noticed."},
+  {number:16,title:'Ryan, Briefly',status:'outline',word_count:0,notes:"Grace casually mentions Ryan. Eli files it under 'good for her.' Doesn't examine the pause before he filed it.\n\nMOTIF: Unfinished film — she's read pages. He always gives her pages. She has notes she hasn't sent yet."},
+  {number:17,title:'The Accidental Call',status:'outline',word_count:0,notes:"ALMOST MOMENT 03 — Natalie pocket-dials him. Two hours disappear. The easy rhythm returns. Neither calls back.\n\nFLAVOR: No flirting. No confessions. Nothing happens. Which is exactly why it feels so dangerous.\n\nANONYMOUS ENTRY 5 follows (Lucy, Deleted Recording)."},
+  {number:18,title:'Wrong Apartment',status:'outline',word_count:0,notes:"NATALIE'S POV CHAPTER — She accidentally drives to the old apartment. The list — she got almost everything on it. Should feel victorious. It doesn't.\n\nREALIZATION: She doesn't miss the relationship. She misses him.\n\nENDING: She almost calls him. Drives away instead. The apartment disappears in her rearview. The feeling doesn't.\n\nVOICE: Polished, slightly composed. Never Sent format internally."},
+  {number:19,title:'The Missed Call',status:'outline',word_count:0,notes:"ALMOST MOMENT 11 — He calls Grace at 11:47pm. She doesn't answer. 2:13am: 'Sorry. Was out. Ryan.' For the first time in twenty years he needed her and she was somewhere else.\n\nFEELING: Not jealousy. Displacement. Something smaller. Harder to identify."},
+  {number:20,title:"Lucy's Chapter — Growth",status:'outline',word_count:0,notes:"LUCY'S POV CHAPTER — She realizes Eli talks about Grace differently. Not the way men talk about women they want. The way people talk about somewhere they've always felt safe.\n\nREALIZATION: She steps back not because she lost — but because she understood. Most emotionally mature thing anyone does in the book.\n\nANONYMOUS ENTRY 6 follows (Grace, Draft Unsaved)."},
+  {number:21,title:'The Window',status:'outline',word_count:0,notes:"ALMOST MOMENT 09 — THE FIRST WINDOW. Alone. Late. One of them almost says the true thing — 'Do you ever think about—' and pulls back. HE LETS HER NOT FINISH IT.\n\nTHAT'S THE WINDOW: Not the honest thing almost said. The deliberate choice not to hear it.\n\nTHE READER WANTS TO SCREAM."},
+  {number:22,title:'Future Tense',status:'outline',word_count:0,notes:"Eli begins imagining different futures. Something has shifted in him without announcement. He doesn't name what shifted.\n\nVOICE: Part Three — commentary starts cracking. Sentences break apart mid-thought."},
+  {number:23,title:'The Conversation',status:'outline',word_count:0,notes:"ALMOST MOMENT 12 — Coffee with Natalie. Tuesday. 'I missed you.' Not romantic. Just true. He realizes if she'd come back sooner he would have really listened.\n\nANONYMOUS ENTRY 7 follows (Natalie, Never Sent — 'It wasn't the life. It was you.')."},
+  {number:24,title:'The Overlap',status:'outline',word_count:0,notes:"ALMOST MOMENT 13 — The film premiere. Grace beside him. Natalie texting. Lucy across the room. Past. Growth. Presence. All at once. For the first time he wonders if he's been asking the wrong question."},
+  {number:25,title:'Wrong Person',status:'outline',word_count:0,notes:"ALMOST MOMENT 14 — Ryan is good. Funny. Thoughtful. Confident without trying. Why did seeing her with the right person feel like seeing her with the wrong one?\n\nKEY: When Ryan leaves, the old rhythm returns immediately. Like a song. Nobody notices except Eli."},
+  {number:26,title:'The Life She Could Choose',status:'outline',word_count:0,notes:"Grace genuinely considers Ryan. Not a placeholder. A real future. Eli watches this without fully understanding what he's watching.\n\nANONYMOUS ENTRY 8 follows (Lucy, Deleted Recording — 'am I protecting my peace, or just protecting my heart?')."},
+  {number:27,title:"Grace's Chapter — Staying",status:'outline',word_count:0,notes:"GRACE'S POV CHAPTER — She does the math on the windows. Twenty years. Never both available at the same time. Not once.\n\nShe built her entire life around the assumption that Eli was not an option — and that assumption was so old she stopped examining it.\n\nVOICE REQUIREMENTS: One chapter. Full weight. No distribution. Humor does double work — breathing room AND defense. She never describes him physically. That absence is the loudest thing in her chapter."},
+  {number:28,title:'The Story He Keeps Telling',status:'outline',word_count:0,notes:"ALMOST MOMENT 15 — The screenplay protagonist isn't searching for someone who makes him feel one thing. He's searching for someone who makes all of those things feel like they belong together.\n\nHe stops typing. 'Because that isn't the screenplay. Or at least it isn't only the screenplay.'\n\nMOTIF: Unfinished film reaching critical point."},
+  {number:29,title:'The Last Window',status:'outline',word_count:0,notes:"THE LAST WINDOW — The pause is longer. The goodbye is harder. Both feel the cost of stepping through. Neither steps.\n\nCRITICAL: Not missed because they don't understand. Missed because they do. The first window was innocent. This one is a choice."},
+  {number:30,title:'Grace and Ryan',status:'outline',word_count:0,notes:"Ryan asks Grace something simple: if he asked, what would you do? Grace doesn't answer immediately. The pause is everything.\n\nEli only hears about this conversation secondhand — and the incomplete version is somehow more devastating.\n\nANONYMOUS ENTRY 9 follows (Grace, Draft Unsaved — 'twenty years. i've been doing this math for twenty years without knowing i was doing it')."},
+  {number:31,title:'The Arithmetic of Almost',status:'outline',word_count:0,notes:"ALMOST MOMENT 15 COMPLETING — Eli finally starts adding. The couch. The wedding. The missed call. The airport. The hallway. The coffee. The windows.\n\nKEY SHIFT: He stops asking WHO. He asks WHAT.\n\nMOTIF: Coffee — Grace left coffee. He is finally understanding what that meant."},
+  {number:32,title:'The Last Ordinary Day',status:'outline',word_count:0,notes:"'Nothing had changed. The only thing that was different was me. Which turned out to be enough.'\n\nTHIS IS NOT THE DAY HE CHOOSES. This is the day he becomes capable of choosing.\n\nMOTIF: Unfinished film — he closes the script for what feels final."},
+  {number:33,title:'What Love Means',status:'outline',word_count:0,notes:"THE BREAKTHROUGH:\n\nNatalie taught him LETTING GO.\nLucy taught him GROWTH.\nGrace taught him STAYING.\n\nThese are not competing ideas. They are components.\n\nHe picks up his phone.\n\nVOICE: Part Four — pure presence. Quieter and more certain simultaneously."},
+  {number:34,title:'Final Entry',status:'outline',word_count:0,notes:"ENTRY 9 ELEVATED TO CHAPTER STATUS — The anonymous voice steps forward.\n\nKEY: 'Love is who you reach for before you've decided to.'\n\nFINAL LINE: 'Maybe I knew. Maybe I just needed a different word for it.'\n\nThe voice steps back. What happens next belongs to Chapter 35."},
+  {number:35,title:'On My Way To You',status:'outline',word_count:0,notes:"THE DRIVE — Three texts:\n'Are you busy right now?'\n'No, what's up?'\n'On my way to you.'\n\nThe title becomes dialogue. No detours. The city at night one last time.\n\nVOICE: Most stripped-back his voice gets. He's stopped looking for the film this is. He's just in it."},
+  {number:36,title:'The Door',status:'outline',word_count:0,notes:"THE ENDING:\n\nA knock.\nA pause.\nThe door opens.\nFor a moment neither of them speaks.\nThen she smiles.\nEnd.\n\nEVERY MOTIF ARRIVES SIMULTANEOUSLY:\n1. Porch light — he sees light under her door\n2. Late night drive — ends here\n3. Silence — four feet of space\n4. Unfinished film — gone. He's in the scene.\n5. Coffee — not present. But the reader remembers.\n\nTHE ENDING IS AMBIGUOUS. The reader does not know whose door opens."}
+];
+
+async function seedChaptersFromSpine() {
+  toast('Loading all 36 chapters from story spine…');
+  for(const c of CHAPTER_SEED) {
+    await sb('chapters', {method:'POST', body:JSON.stringify(c), headers:{...h,'Prefer':'return=representation'}});
+  }
+  await loadChapters();
+  renderChapters();
+  renderDashboard();
+  toast('All 36 chapters loaded!');
+}
+
+// ─── READ ALOUD ───────────────────────────────────────────
+let ttsUtterance = null, ttsActive = false;
+
+function toggleReadAloud() {
+  const btn = document.getElementById('btn-readaloud');
+  if(ttsActive) {
+    speechSynthesis.cancel();
+    ttsActive = false;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    toast('Read aloud stopped');
+    return;
+  }
+  const text = document.getElementById('editor-body').value.trim();
+  if(!text) { toast('Nothing to read — write some text first'); return; }
+  ttsUtterance = new SpeechSynthesisUtterance(text);
+  ttsUtterance.rate = 0.92;
+  ttsUtterance.pitch = 1;
+  ttsUtterance.onend = () => { ttsActive=false; btn.style.color=''; btn.style.borderColor=''; };
+  ttsUtterance.onerror = () => { ttsActive=false; btn.style.color=''; btn.style.borderColor=''; };
+  speechSynthesis.speak(ttsUtterance);
+  ttsActive = true;
+  btn.style.color = 'var(--accent)';
+  btn.style.borderColor = 'var(--accent)';
+  toast('Reading aloud… click again to stop');
+}
+
+// ─── VOICE DRIFT CHECK ────────────────────────────────────
+const DRIFT_RULES = {
+  eli: [
+    {label:'Missing film/pop culture references', severity:'warn', check: t => t.length>300 && !/(film|movie|scene|cut|frame|episode|album|song|track|director|character|watch|saw|listen)/i.test(t), msg:'Eli\'s chapters typically contain film/TV/music references. None detected — is this intentional for Part 4?'},
+    {label:'Uses the word "love" about Grace', severity:'error', check: t => /\blove\b.{0,60}(grace|her|she)/i.test(t), msg:'Eli never uses "love" in relation to Grace until Part 4 — and even then not directly. Flag if this is Part 1-3.'},
+    {label:'Interior warmth without external anchor', severity:'warn', check: t => { const warm = (t.match(/\bfeel\b|\bfelt\b|\bemotion\b|\bheart\b/gi)||[]).length; return warm > 4; }, msg:`High interior emotional language detected (${0} instances). Eli processes externally — he should be describing what he sees/hears, not what he feels directly. Risk of voice drift into Grace's register.`},
+    {label:'Sentence compression check on Grace', severity:'info', check: t => { const graceParas = t.split('\n').filter(p=>p.toLowerCase().includes('grace')); return graceParas.some(p=>p.split(/[.!?]/).filter(s=>s.trim().length>80).length>2); }, msg:'One or more paragraphs about Grace contain long sentences. Eli\'s sentences about her should be shorter than sentences about other characters — the compression is unconscious.'},
+    {label:'Unfinished thought check', severity:'info', check: t => !/—|\.\.\./.test(t) && t.length > 400, msg:'No em-dashes or ellipses detected. Eli\'s Part 3+ voice uses interrupted/trailing thoughts as his framing starts failing. Consider whether this chapter needs them.'},
+  ],
+  grace: [
+    {label:'Physical description of Eli', severity:'error', check: t => /(his eyes|his hair|his hands|his face|his voice|his smile|he looked|he was tall|he was wearing|his jaw|his shoulders)/i.test(t), msg:'GRACE NEVER DESCRIBES ELI PHYSICALLY. That absence is the loudest thing in her chapters. Remove or rework any physical description of him.'},
+    {label:'Uses "love" about Eli', severity:'error', check: t => /\blove\b.{0,60}(eli|him|he )/i.test(t), msg:'Grace never names what she feels about him. She describes his behavior, his effect on rooms, what he said — never what it costs her. Remove direct love language.'},
+    {label:'Metaphor about feelings for Eli', severity:'error', check: t => /(like a|feels like|as if|reminds me of).{0,40}(eli|him|he )/i.test(t), msg:'Grace never reaches for a metaphor to describe what she feels around him. She is precise about everything except this. The imprecision is the evidence — don\'t give her the precision.'},
+    {label:'Missing humor', severity:'warn', check: t => t.length>300 && !/(laugh|joke|funny|smile|smirk|wry|absurd|ridiculous|honestly|obviously)/i.test(t), msg:'No humor detected. Grace\'s voice is warm and funny — her humor arrives at sentence level. If approaching something she isn\'t ready to name, a joke should appear.'},
+    {label:'Sentence completing a thought about Eli', severity:'warn', check: t => /(i think about eli|i think about him|what i feel|how i feel about)/i.test(t), msg:'Grace never lets herself finish the thought that starts when he gets through her filing system. She moves on. Quickly. The speed of the pivot is the tell.'},
+  ],
+  natalie: [
+    {label:'Tone check — is it slightly composed?', severity:'info', check: t => false, msg:'Natalie\'s voice is polished and slightly arranged — everything delivered with poise. Her entries feel addressed to someone (the "you" is present). Check that her voice has this quality.'},
+    {label:'Never Sent format reminder', severity:'info', check: t => false, msg:'Natalie writes in Never Sent format — letters written to someone. Should feel intimate and slightly formal. The "you" should be present even if unnamed.'},
+  ],
+  lucy: [
+    {label:'Deleted Recording format reminder', severity:'info', check: t => false, msg:'Lucy\'s format is Deleted Recording — voice memos started and erased. Should feel conversational, self-interrupting, starting one place and ending somewhere else. Less structured than Natalie.'},
+    {label:'Self-awareness check', severity:'info', check: t => false, msg:'Lucy is self-aware enough to notice she\'s being evasive. Her entries should acknowledge the evasion even as they perform it.'},
+  ]
+};
+
+function runDriftCheck() {
+  const text = document.getElementById('editor-body').value;
+  const pov = document.getElementById('drift-pov').value;
+  const rules = DRIFT_RULES[pov]||[];
+  const results = document.getElementById('drift-results');
+
+  if(!text.trim()) { results.innerHTML='<div style="color:var(--text3);font-size:12px">No text to check. Write some content first.</div>'; return; }
+
+  const findings = [];
+  rules.forEach(rule => {
+    try {
+      if(rule.check(text)) {
+        findings.push({...rule});
+      }
+    } catch(e) {}
+  });
+
+  if(!findings.length) {
+    results.innerHTML=`<div style="padding:12px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:8px;color:var(--green);font-size:13px"><i class="fas fa-check-circle" style="margin-right:6px"></i>No drift issues detected for ${pov.charAt(0).toUpperCase()+pov.slice(1)}'s voice. The chapter appears consistent with the Voice Document rules.</div>`;
+    return;
+  }
+
+  const sColors = {error:'var(--red)',warn:'var(--amber)',info:'var(--blue)'};
+  const sIcons = {error:'fa-exclamation-circle',warn:'fa-exclamation-triangle',info:'fa-info-circle'};
+  results.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${findings.length} issue${findings.length!==1?'s':''} found for ${pov.charAt(0).toUpperCase()+pov.slice(1)}:</div>`+
+    findings.map(f=>`<div style="padding:10px 12px;margin-bottom:8px;border-radius:8px;background:${sColors[f.severity]}11;border:1px solid ${sColors[f.severity]}33">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><i class="fas ${sIcons[f.severity]}" style="color:${sColors[f.severity]};font-size:12px"></i><span style="font-size:12px;font-weight:600;color:var(--text)">${f.label}</span></div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">${f.msg}</div>
+    </div>`).join('');
+}
+
+// ─── CO-AUTHOR PASSAGE NOTES ──────────────────────────────
+let passageNotes = [];
+
+function checkTextSelection() {
+  const sel = window.getSelection();
+  const bar = document.getElementById('editor-selection-bar');
+  if(sel && sel.toString().trim().length > 10) {
+    document.getElementById('editor-sel-preview').textContent = '"'+sel.toString().trim().slice(0,60)+(sel.toString().trim().length>60?'…':'')+'"';
+    bar.style.display='flex';
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function openAddPassageNote() {
+  document.getElementById('pn-passage').value='';
+  document.getElementById('pn-note').value='';
+  document.getElementById('pn-chapter-id').value=editorChapterId||'';
+  const pnSel=document.getElementById('pn-author');
+  pnSel.innerHTML=`<option value="${escHtml(currentDisplayName)}">${escHtml(currentDisplayName)}</option>`;
+  document.getElementById('modal-passage-note').classList.add('open');
+}
+
+function addPassageNote() {
+  const sel = window.getSelection();
+  const passage = sel?sel.toString().trim():'';
+  document.getElementById('pn-passage').value=passage;
+  document.getElementById('pn-note').value='';
+  document.getElementById('pn-chapter-id').value=editorChapterId||'';
+  const pnSel=document.getElementById('pn-author');
+  pnSel.innerHTML=`<option value="${escHtml(currentDisplayName)}">${escHtml(currentDisplayName)}</option>`;
+  document.getElementById('modal-passage-note').classList.add('open');
+}
+
+async function savePassageNote() {
+  const payload={chapter_id:document.getElementById('pn-chapter-id').value||null,passage:document.getElementById('pn-passage').value.trim(),note:document.getElementById('pn-note').value.trim(),author_id:currentDisplayName};
+  if(!payload.note){toast('Note cannot be empty');return;}
+  await sb('passage_notes',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});
+  closeModal('modal-passage-note');
+  toast('Note saved');
+  await loadPassageNotes(editorChapterId);
+  renderPassageNotes();
+}
+
+async function loadPassageNotes(chapterId) {
+  if(!chapterId) return;
+  const d = await sb(`passage_notes?chapter_id=eq.${chapterId}&order=created_at.desc`);
+  if(d) passageNotes=d;
+}
+
+function renderPassageNotes() {
+  const el=document.getElementById('editor-notes-list');
+  if(!passageNotes.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center">No notes yet for this chapter</div>';return;}
+  el.innerHTML=passageNotes.map(n=>{
+    const auth = {name: n.author_id||'', color:'var(--accent)'};
+    return `<div style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px">
+      ${n.passage?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-bottom:6px;padding:6px 8px;background:var(--bg2);border-radius:4px;border-left:2px solid var(--accent)">"${escHtml(n.passage.slice(0,80))}${n.passage.length>80?'…':''}"</div>`:''}
+      <div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:6px">${escHtml(n.note)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${auth?`<div style="width:18px;height:18px;border-radius:50%;background:${auth.color}22;color:${auth.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${auth.name.slice(0,1)}</div><span style="font-size:11px;color:var(--text3)">${escHtml(auth.name)}</span>`:''}
+          <span style="font-size:10px;color:var(--text3)">· ${timeAgo(n.created_at)}</span>
+        </div>
+        <button onclick="deletePassageNote('${n.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 4px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'"><i class="fas fa-times"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deletePassageNote(id) {
+  if(!confirm('Delete this note?'))return;
+  await sb(`passage_notes?id=eq.${id}`,{method:'DELETE'});
+  await loadPassageNotes(editorChapterId);
+  renderPassageNotes();
+  toast('Note deleted');
+}
+
+// ─── ANONYMOUS ENTRY COMPOSER ─────────────────────────────
+const ENTRY_HINTS = {
+  grace: {hint:"Grace writes to understand, not to communicate.\n\n• Lowercase throughout\n• Fragmented — incomplete sentences are deliberate\n• Deceptively simple on the surface\n• Emotional weight lives UNDERNEATH the plainness\n• What she doesn't finish is where the reader lives\n• Never confirms anything directly\n• Format: Draft Unsaved (phone notes, fragments)"},
+  natalie: {hint:"Natalie communicates even when she doesn't send it.\n\n• Slightly polished — she knows how to arrange feelings into sentences\n• Writes TO someone — 'you' is present, unnamed\n• Intimate but with poise\n• Trying to reach closure through writing\n• Slightly formal — the Never Sent format shows\n• Never confirms anything directly\n• Format: Never Sent (unsent letters, abandoned drafts)"},
+  lucy: {hint:"Lucy talks to think.\n\n• Conversational, unfinished, self-interrupting\n• Starts one place, ends somewhere else\n• Self-aware enough to notice she's being evasive\n• Less structured than Natalie\n• Voice memos often trail off mid-thought\n• Never confirms anything directly\n• Format: Deleted Recording (voice memos started and erased)\n• End with: [Recording ends.]"}
+};
+
+function updateEntryPrompt() {
+  const char=document.getElementById('entry-character').value;
+  const hint=ENTRY_HINTS[char];
+  if(hint) document.getElementById('entry-format-hint').textContent=hint.hint;
+}
+
+function copyEntry() {
+  const text=document.getElementById('entry-body').value;
+  if(!text){toast('Nothing to copy');return;}
+  navigator.clipboard.writeText(text).then(()=>toast('Entry copied to clipboard!')).catch(()=>toast('Select all and copy manually'));
+}
+
+async function saveEntryAsIdea() {
+  const text=document.getElementById('entry-body').value.trim();
+  if(!text){toast('Nothing to save');return;}
+  const char=document.getElementById('entry-character').value;
+  const content=`[Anonymous Entry — ${char.charAt(0).toUpperCase()+char.slice(1)} voice]\n\n${text}`;
+  await sb('ideas',{method:'POST',body:JSON.stringify({category:'misc',content,author_id:currentDisplayName}),headers:{...h,'Prefer':'return=representation'}});
+  await loadIdeas();
+  toast('Entry saved to Idea Board!');
+}
+
+// ─── SEARCH ───────────────────────────────────────────────
+let searchTimeout = null;
+
+function openSearch() {
+  const overlay=document.getElementById('search-overlay');
+  overlay.style.display='flex';
+  setTimeout(()=>document.getElementById('search-input').focus(),50);
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').style.display='none';
+  document.getElementById('search-input').value='';
+  document.getElementById('search-results').innerHTML='';
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openSearch();}
+  if(e.key==='Escape'&&document.getElementById('search-overlay').style.display==='flex') closeSearch();
+});
+
+function runSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(()=>{
+    const q=document.getElementById('search-input').value.trim().toLowerCase();
+    const el=document.getElementById('search-results');
+    if(q.length<2){el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);text-align:center">Type at least 2 characters to search…</div>';return;}
+    const results=[];
+    // Search chapters
+    chapters.forEach(c=>{
+      if(c.title.toLowerCase().includes(q)||(c.notes||'').toLowerCase().includes(q)||(c.body||'').toLowerCase().includes(q)){
+        const snippet = (c.body||c.notes||'').toLowerCase().indexOf(q);
+        const preview = snippet>=0?(c.body||c.notes||'').slice(Math.max(0,snippet-30),snippet+80):'';
+        results.push({type:'chapter',icon:'fa-list-ol',color:'var(--accent)',label:`Ch. ${c.number} — ${c.title}`,preview,action:`openChapterEditor('${c.id}');closeSearch()`});
+      }
+    });
+    // Search ideas
+    ideas.forEach(i=>{
+      if(i.content.toLowerCase().includes(q)){
+        results.push({type:'idea',icon:'fa-lightbulb',color:'var(--amber)',label:i.content.slice(0,60)+(i.content.length>60?'…':''),preview:'',action:`showTab('ideas',document.querySelector('[onclick*=ideas]'));closeSearch()`});
+      }
+    });
+    // Search discussion
+    discussion.forEach(m=>{
+      if(m.content.toLowerCase().includes(q)){
+        const auth = {name: m.author_id||'Unknown', color:'var(--accent)'};
+        results.push({type:'discussion',icon:'fa-comments',color:'var(--green)',label:`${auth?auth.name:'Unknown'}: ${m.content.slice(0,60)}`,preview:'',action:`showTab('discuss',document.querySelector('[onclick*=discuss]'));closeSearch()`});
+      }
+    });
+    // Search documents
+    documents.forEach(d=>{
+      if(d.name.toLowerCase().includes(q)){
+        results.push({type:'document',icon:'fa-file-alt',color:'var(--blue)',label:d.name,preview:'',action:`viewDocument('${d.id}');closeSearch()`});
+      }
+    });
+    if(!results.length){el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);text-align:center">No results for "'+escHtml(q)+'"</div>';return;}
+    el.innerHTML=results.slice(0,15).map((r,i)=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'" onclick="${r.action}">
+        <div style="width:28px;height:28px;border-radius:6px;background:${r.color}22;color:${r.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px"><i class="fas ${r.icon}" style="font-size:12px"></i></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.label)}</div>
+          ${r.preview?`<div style="font-size:11px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">…${escHtml(r.preview)}…</div>`:''}
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:capitalize">${r.type}</div>
+        </div>
+      </div>`).join('');
+  }, 200);
+}
+
+function searchKeyNav(e) {
+  if(e.key==='Escape') closeSearch();
+}
+
+// ─── WRITING SESSIONS ─────────────────────────────────────
+let sessions=[];
+
+async function loadSessions() {
+  const d=await sb('writing_sessions?order=session_date.desc&limit=100');
+  if(d===null){console.warn('writing_sessions table missing');return;}
+  sessions=d;
+}
+
+function renderSessions() {
+  const total=sessions.length;
+  const totalWords=sessions.reduce((s,x)=>s+(x.words_written||0),0);
+  const totalMins=sessions.reduce((s,x)=>s+(x.duration_minutes||0),0);
+  document.getElementById('sess-total-sessions').textContent=total||'0';
+  document.getElementById('sess-total-words').textContent=totalWords>=1000?(totalWords/1000).toFixed(1)+'k':totalWords||'0';
+  document.getElementById('sess-total-time').textContent=totalMins>=60?(totalMins/60).toFixed(1)+'h':totalMins+'m';
+
+  // Streak
+  const dates=[...new Set(sessions.map(s=>s.session_date))].sort().reverse();
+  let streak=0;
+  const today=new Date().toISOString().slice(0,10);
+  let check=today;
+  for(const d of dates){
+    if(d===check){streak++;const dt=new Date(check);dt.setDate(dt.getDate()-1);check=dt.toISOString().slice(0,10);}
+    else break;
+  }
+  document.getElementById('sess-streak').textContent=streak+'🔥';
+
+  // Heatmap (last 30 days)
+  const heatmap=document.getElementById('sess-heatmap');
+  const days30=[];
+  for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days30.push(d.toISOString().slice(0,10));}
+  const byDate={};
+  sessions.forEach(s=>{if(!byDate[s.session_date])byDate[s.session_date]=0;byDate[s.session_date]+=(s.words_written||0);});
+  const maxWc=Math.max(...Object.values(byDate),1);
+  heatmap.innerHTML=`<div style="margin-bottom:8px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Last 30 Days</div><div style="display:flex;gap:3px;flex-wrap:wrap">${days30.map(d=>{const wc=byDate[d]||0;const opacity=wc?Math.max(0.2,wc/maxWc):0;const bg=wc?`rgba(139,124,246,${opacity})`:'var(--bg3)';return`<div title="${d}: ${wc} words" style="width:20px;height:20px;border-radius:3px;background:${bg};border:1px solid var(--border)"></div>`;}).join('')}</div>`;
+
+  const el=document.getElementById('sessions-list');
+  if(!sessions.length){el.innerHTML='<div class="empty-state"><i class="fas fa-pen-nib"></i><p>No sessions logged yet — track your writing progress!</p></div>';return;}
+  el.innerHTML=sessions.slice(0,30).map(s=>{
+    const auth = {name: s.author_id||'', color:'var(--accent)'};
+    const chap=chapters.find(c=>c.id===s.chapter_id);
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'" onclick="openEditSession('${s.id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--text)">${new Date(s.session_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+        ${auth?`<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:${auth.color}22;color:${auth.color}">${escHtml(auth.name)}</span>`:''}
+        ${chap?`<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--accent-glow);color:var(--accent)">Ch. ${chap.number}</span>`:''}
+      </div>
+      <div style="display:flex;gap:14px">
+        ${s.words_written?`<span style="font-size:12px;color:var(--green)"><i class="fas fa-pen" style="margin-right:4px"></i>${s.words_written.toLocaleString()} words</span>`:''}
+        ${s.duration_minutes?`<span style="font-size:12px;color:var(--amber)"><i class="fas fa-clock" style="margin-right:4px"></i>${s.duration_minutes} min</span>`:''}
+      </div>
+      ${s.notes?`<div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.4">${escHtml(s.notes.slice(0,100))}${s.notes.length>100?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openAddSession() {
+  document.getElementById('modal-sess-title').textContent='Log Writing Session';
+  document.getElementById('sess-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('sess-duration').value='';
+  document.getElementById('sess-words').value='';
+  document.getElementById('sess-notes').value='';
+  document.getElementById('sess-edit-id').value='';
+  document.getElementById('sess-delete-btn').style.display='none';
+  const asel=document.getElementById('sess-author');
+  asel.innerHTML='<option value="'+escHtml(currentDisplayName)+'">'+escHtml(currentDisplayName)+'</option>';
+  const csel=document.getElementById('sess-chapter');
+  csel.innerHTML='<option value="">— General / Multiple —</option>'+chapters.map(c=>`<option value="${c.id}">Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  openModal('modal-session');
+}
+
+function openEditSession(id) {
+  const s=sessions.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('modal-sess-title').textContent='Edit Session';
+  document.getElementById('sess-date').value=s.session_date||'';
+  document.getElementById('sess-duration').value=s.duration_minutes||'';
+  document.getElementById('sess-words').value=s.words_written||'';
+  document.getElementById('sess-notes').value=s.notes||'';
+  document.getElementById('sess-edit-id').value=id;
+  document.getElementById('sess-delete-btn').style.display='inline-flex';
+  const asel=document.getElementById('sess-author');
+  asel.innerHTML='<option value="'+escHtml(currentDisplayName)+'">'+escHtml(currentDisplayName)+'</option>';
+  const csel=document.getElementById('sess-chapter');
+  csel.innerHTML='<option value="">— General / Multiple —</option>'+chapters.map(c=>`<option value="${c.id}"${c.id===s.chapter_id?' selected':''}>Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  openModal('modal-session');
+}
+
+async function saveSession() {
+  const payload={session_date:document.getElementById('sess-date').value||new Date().toISOString().slice(0,10),duration_minutes:parseInt(document.getElementById('sess-duration').value)||null,words_written:parseInt(document.getElementById('sess-words').value)||null,author_id:currentDisplayName,chapter_id:document.getElementById('sess-chapter').value||null,notes:document.getElementById('sess-notes').value.trim()};
+  const eid=document.getElementById('sess-edit-id').value;
+  if(eid){await sb(`writing_sessions?id=eq.${eid}`,{method:'PATCH',body:JSON.stringify(payload)});toast('Session updated');}
+  else{await sb('writing_sessions',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});toast('Session logged!');logActivity(`Logged a writing session`);}
+  closeModal('modal-session');
+  await loadSessions();renderSessions();
+}
+
+async function deleteSession() {
+  const eid=document.getElementById('sess-edit-id').value;
+  if(!eid||!confirm('Delete this session?'))return;
+  await sb(`writing_sessions?id=eq.${eid}`,{method:'DELETE'});
+  closeModal('modal-session');
+  await loadSessions();renderSessions();
+  toast('Session deleted');
+}
+
+// Update editor showEditorTab to include new panels
+function showEditorTab(tab) {
+  ['notes','brief','history','drift','entry'].forEach(t=>{
+    const el=document.getElementById(`editor-${t}-panel`);
+    if(el) el.style.display='none';
+  });
+  ['btn-notes','btn-brief','btn-history','btn-drift','btn-entry'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn){btn.style.background='transparent';btn.style.color='var(--text)';}
+  });
+  if(tab==='write') return;
+  const panel=document.getElementById(`editor-${tab}-panel`);
+  if(panel) panel.style.display='flex';
+  const btn=document.getElementById(`btn-${tab}`);
+  if(btn){btn.style.background='var(--accent)';btn.style.color='#fff';}
+  if(tab==='notes'){loadPassageNotes(editorChapterId).then(()=>renderPassageNotes());}
+  if(tab==='entry'){updateEntryPrompt();}
+}
+
+// ─── READ MODE ────────────────────────────────────────────
+let readChapterIndex = 0;
+let readChapters = [];
+
+function openReadMode() {
+  readChapters = [...chapters].sort((a,b)=>a.number-b.number).filter(c=>c.body&&c.body.trim().length>0);
+  if(!readChapters.length) {
+    toast('No written chapters yet — start writing first!');
+    return;
+  }
+  readChapterIndex = 0;
+  document.getElementById('read-mode-overlay').style.display = 'flex';
+  renderReadChapter();
+}
+
+function closeReadMode() {
+  document.getElementById('read-mode-overlay').style.display = 'none';
+  if(ttsActive) { speechSynthesis.cancel(); ttsActive=false; }
+}
+
+function renderReadChapter() {
+  const c = readChapters[readChapterIndex];
+  if(!c) return;
+
+  document.getElementById('read-mode-title').textContent = `Ch. ${c.number} — ${c.title}`;
+  document.getElementById('read-chapter-indicator').textContent = `Chapter ${readChapterIndex+1} of ${readChapters.length}`;
+  document.getElementById('read-prev').disabled = readChapterIndex===0;
+  document.getElementById('read-next').disabled = readChapterIndex===readChapters.length-1;
+
+  const body = c.body||'';
+  const paragraphs = body.split('\n').filter(p=>p.trim());
+  const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+
+  const width = document.getElementById('read-width').value;
+  const content = document.getElementById('read-mode-content');
+  content.style.maxWidth = width+'px';
+
+  content.innerHTML = `
+    <div style="text-align:center;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Chapter ${c.number}</div>
+      <div style="font-size:26px;font-weight:400;color:#e8e8e8;margin-bottom:8px">${escHtml(c.title)}</div>
+      ${c.pov?`<div style="font-size:12px;color:#666;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+      <div style="font-size:11px;color:#444;margin-top:8px">${wc.toLocaleString()} words</div>
+    </div>
+    ${paragraphs.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+    <div style="text-align:center;margin-top:48px;color:#444;font-size:20px">* * *</div>
+  `;
+
+  document.getElementById('read-mode-body').scrollTop = 0;
+  updateReadProgress();
+}
+
+function updateReadStyle() {
+  const font = document.getElementById('read-font').value;
+  const size = document.getElementById('read-size').value;
+  const width = document.getElementById('read-width').value;
+  const content = document.getElementById('read-mode-content');
+  content.style.fontFamily = font;
+  content.style.fontSize = size+'px';
+  content.style.maxWidth = width+'px';
+}
+
+function updateReadProgress() {
+  const body = document.getElementById('read-mode-body');
+  const pct = Math.round((body.scrollTop/(body.scrollHeight-body.clientHeight))*100)||0;
+  document.getElementById('read-progress').textContent = pct+'% read';
+}
+
+function readModePrev() {
+  if(readChapterIndex>0) { readChapterIndex--; renderReadChapter(); }
+}
+
+function readModeNext() {
+  if(readChapterIndex<readChapters.length-1) { readChapterIndex++; renderReadChapter(); }
+}
+
+// Keyboard navigation in read mode
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('read-mode-overlay').style.display!=='flex') return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') readModeNext();
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') readModePrev();
+  if(e.key==='Escape') closeReadMode();
+});
+
+// ─── EXPORT ───────────────────────────────────────────────
+function openExportModal() {
+  // Populate author field
+  document.getElementById('export-authors').value = currentDisplayName;
+
+  // Build chapter checklist
+  const list = document.getElementById('export-chapter-list');
+  const sorted = [...chapters].sort((a,b)=>a.number-b.number);
+  list.innerHTML = sorted.map(c=>{
+    const wc = c.word_count||0;
+    const hasBody = c.body&&c.body.trim().length>0;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:${hasBody?'var(--text)':'var(--text3)'};cursor:pointer;padding:2px 0">
+      <input type="checkbox" class="export-chap-cb" value="${c.id}" ${hasBody?'checked':''} style="accent-color:var(--accent)" onchange="updateExportSummary()"/>
+      Ch. ${c.number} — ${escHtml(c.title)}
+      <span style="margin-left:auto;color:var(--text3);font-size:11px">${hasBody?wc.toLocaleString()+' w':'no content'}</span>
+    </label>`;
+  }).join('');
+
+  updateExportSummary();
+  openModal('modal-export');
+}
+
+function exportSelectAll() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>cb.checked=true);
+  updateExportSummary();
+}
+function exportSelectNone() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>cb.checked=false);
+  updateExportSummary();
+}
+function exportSelectWritten() {
+  document.querySelectorAll('.export-chap-cb').forEach(cb=>{
+    const id=cb.value;
+    const c=chapters.find(x=>x.id===id);
+    cb.checked = !!(c&&c.body&&c.body.trim().length>0);
+  });
+  updateExportSummary();
+}
+
+function updateExportSummary() {
+  const selected = [...document.querySelectorAll('.export-chap-cb:checked')].map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean);
+  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
+  document.getElementById('export-summary').textContent = `${selected.length} chapter${selected.length!==1?'s':''} selected · ${totalWc.toLocaleString()} words total`;
+}
+
+function runExport() {
+  const title = document.getElementById('export-title').value.trim()||'On My Way To You';
+  const authorStr = document.getElementById('export-authors').value.trim();
+  const format = document.getElementById('export-format').value;
+  const incBrief = document.getElementById('export-inc-brief').checked;
+  const incWc = document.getElementById('export-inc-wc').checked;
+  const incPov = document.getElementById('export-inc-pov').checked;
+
+  const selected = [...document.querySelectorAll('.export-chap-cb:checked')]
+    .map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean)
+    .sort((a,b)=>a.number-b.number);
+
+  if(!selected.length) { toast('Select at least one chapter'); return; }
+
+  let output = '';
+  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
+
+  if(format==='pdf') {
+    // Build HTML then open print dialog
+    const chapHtmlPdf = selected.map(c=>`
+      <div style="margin-bottom:60px;page-break-after:always">
+        <div style="text-align:center;margin-bottom:36px">
+          <div style="font-size:11px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
+          <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px;font-family:Georgia,serif">${escHtml(c.title)}</h2>
+          ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+          ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
+        </div>
+        ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic;font-family:Georgia,serif">${escHtml(c.notes)}</div>`:''}
+        <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
+          ${(c.body||'<em>No content written yet.</em>').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+        </div>
+        <div style="text-align:center;margin-top:40px;color:#ccc;font-family:Georgia,serif">* * *</div>
+      </div>`).join('');
+
+    const pdfWin = window.open('','_blank');
+    pdfWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
+    <style>
+      body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}
+      @media print{
+        body{margin:0;max-width:none;padding:40px}
+        .chapter{page-break-after:always}
+        .no-print{display:none}
+      }
+    </style></head><body>
+    <div class="no-print" style="background:#f0f0f0;padding:12px 16px;margin-bottom:24px;border-radius:6px;font-family:sans-serif;font-size:13px">
+      <strong>Ready to save as PDF</strong> — press <strong>Cmd+P</strong> (Mac) or <strong>Ctrl+P</strong> (Windows), then choose "Save as PDF" as the destination.
+      <button onclick="window.print()" style="margin-left:12px;padding:6px 14px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Print / Save PDF</button>
+    </div>
+    <div style="text-align:center;margin-bottom:80px;padding-bottom:40px;border-bottom:1px solid #eee">
+      <h1 style="font-size:32px;font-weight:400;margin:0 0 12px;font-family:Georgia,serif">${escHtml(title)}</h1>
+      ${authorStr?`<div style="font-size:16px;color:#777;font-style:italic;font-family:Georgia,serif">by ${escHtml(authorStr)}</div>`:''}
+      <div style="font-size:13px;color:#aaa;margin-top:12px;font-family:sans-serif">${totalWc.toLocaleString()} words · ${selected.length} chapters</div>
+    </div>
+    ${chapHtmlPdf}
+    </body></html>`);
+    pdfWin.document.close();
+    closeModal('modal-export');
+    toast(`PDF ready — use Cmd/Ctrl+P to save`);
+    return;
+
+  } else if(format==='docx') {
+    // Generate RTF (opens in Word/Pages/Docs)
+    let rtf = `{\\rtf1\\ansi\\deff0\n{\\fonttbl{\\f0 Georgia;}{\\f1 Arial;}}\n{\\colortbl;\\red51\\green51\\blue51;\\red153\\green153\\blue153;}\n\\paperw12240\\paperh15840\\margl1800\\margr1800\\margt1440\\margb1440\n`;
+    rtf += `\\pard\\qc\\f0\\fs48\\b ${title.replace(/[\\{}]/g,'')}`+'\\b0'+`\\par\n`;
+    if(authorStr) rtf += `\\f1\\fs24\\cf2 by ${authorStr.replace(/[\\{}]/g,'')}\\cf0\\par\n`;
+    rtf += `\\f1\\fs20\\cf2 ${totalWc.toLocaleString()} words · ${selected.length} chapters\\cf0\\par\\par\n`;
+
+    selected.forEach(c => {
+      rtf += `\\page\\pard\\qc\\f1\\fs20\\cf2 CHAPTER ${c.number}\\cf0\\par\n`;
+      rtf += `\\f0\\fs36\\b ${(c.title||'').replace(/[\\{}]/g,'')}\\b0\\par\n`;
+      if(incPov&&c.pov) rtf += `\\f1\\fs20\\i\\cf2 ${c.pov}'s POV\\cf0\\i0\\par\n`;
+      if(incWc) rtf += `\\f1\\fs18\\cf2 ${(c.word_count||0).toLocaleString()} words\\cf0\\par\n`;
+      rtf += `\\par\n`;
+      if(incBrief&&c.notes) {
+        rtf += `\\f1\\fs20\\cf2\\i Brief: ${c.notes.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\i0\\cf0\\par\\par\n`;
+      }
+      const paras = (c.body||'No content written yet.').split('\n').filter(p=>p.trim());
+      paras.forEach(p => {
+        rtf += `\\pard\\fi360\\f0\\fs24 ${p.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\par\n`;
+      });
+      rtf += `\\pard\\qc\\f0\\fs24 * * *\\par\n`;
+    });
+    rtf += '}';
+
+    downloadFile(title.replace(/\s+/g,'_')+'.rtf', rtf, 'application/rtf');
+    closeModal('modal-export');
+    toast(`Word-compatible RTF exported — opens in Word, Pages, or Google Docs`);
+    return;
+  }
+
+  if(format==='txt') {
+    output += `${title.toUpperCase()}\n`;
+    if(authorStr) output += `by ${authorStr}\n`;
+    output += `\n${totalWc.toLocaleString()} words · ${selected.length} chapters\n`;
+    output += '\n' + '─'.repeat(60) + '\n\n';
+
+    selected.forEach(c=>{
+      output += `CHAPTER ${c.number}\n${c.title.toUpperCase()}\n`;
+      if(incPov&&c.pov) output += `[${c.pov}'s POV]\n`;
+      if(incWc) output += `[${(c.word_count||0).toLocaleString()} words]\n`;
+      output += '\n';
+      if(incBrief&&c.notes) output += `[BRIEF: ${c.notes}]\n\n`;
+      output += (c.body||'[No content written yet]') + '\n\n';
+      output += '* * *\n\n';
+    });
+
+    downloadFile(title.replace(/\s+/g,'_')+'.txt', output, 'text/plain');
+
+  } else if(format==='md') {
+    output += `# ${title}\n`;
+    if(authorStr) output += `*by ${authorStr}*\n\n`;
+    output += `---\n*${totalWc.toLocaleString()} words · ${selected.length} chapters*\n\n---\n\n`;
+
+    selected.forEach(c=>{
+      output += `## Chapter ${c.number}: ${c.title}\n\n`;
+      if(incPov&&c.pov) output += `*${c.pov}'s POV*`;
+      if(incWc) output += ` · *${(c.word_count||0).toLocaleString()} words*`;
+      if(incPov||incWc) output += '\n\n';
+      if(incBrief&&c.notes) output += `> **Brief:** ${c.notes}\n\n`;
+      output += (c.body||'*No content written yet.*') + '\n\n---\n\n';
+    });
+
+    downloadFile(title.replace(/\s+/g,'_')+'.md', output, 'text/markdown');
+
+  } else {
+    // HTML
+    const chapHtml = selected.map(c=>`
+      <div class="chapter" style="margin-bottom:60px;page-break-after:always">
+        <div style="text-align:center;margin-bottom:36px">
+          <div style="font-size:12px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
+          <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px">${escHtml(c.title)}</h2>
+          ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+          ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
+        </div>
+        ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic">${escHtml(c.notes)}</div>`:''}
+        <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
+          ${(c.body||'<em>No content written yet.</em>').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+        </div>
+        <div style="text-align:center;margin-top:40px;color:#ccc">* * *</div>
+      </div>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
+    <style>body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}
+    @media print{.chapter{page-break-after:always}}</style></head><body>
+    <div style="text-align:center;margin-bottom:80px;padding-bottom:40px;border-bottom:1px solid #eee">
+      <h1 style="font-size:32px;font-weight:400;margin:0 0 12px">${escHtml(title)}</h1>
+      ${authorStr?`<div style="font-size:16px;color:#777;font-style:italic">by ${escHtml(authorStr)}</div>`:''}
+      <div style="font-size:13px;color:#aaa;margin-top:12px">${totalWc.toLocaleString()} words · ${selected.length} chapters</div>
+    </div>
+    ${chapHtml}</body></html>`;
+
+    downloadFile(title.replace(/\s+/g,'_')+'.html', html, 'text/html');
+  }
+
+  closeModal('modal-export');
+  toast(`Exported ${selected.length} chapters — ${totalWc.toLocaleString()} words`);
+}
+
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], {type:mimeType});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── THEME SYSTEM ─────────────────────────────────────────
+const THEMES = {
+  'Sage Green': {
+    accent:'#5a8a6a', accent2:'#3d6b50',
+    accentGlow:'rgba(90,138,106,0.14)',
+    light:{bg:'#f5f4f0',bg2:'#ffffff',bg3:'#ede9e3',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.14)',text:'#1a1a1a',text2:'#5a5a5a',text3:'#9a9a9a'},
+    dark:{bg:'#0e120f',bg2:'#141a15',bg3:'#1b251c',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#e8f0ea',text2:'#8aa890',text3:'#4a6650'}
+  },
+  'Warm Amber': {
+    accent:'#c8860a', accent2:'#a06a06',
+    accentGlow:'rgba(200,134,10,0.14)',
+    light:{bg:'#faf8f3',bg2:'#ffffff',bg3:'#f2ede2',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#1a1608',text2:'#6b5e3a',text3:'#a89470'},
+    dark:{bg:'#131008',bg2:'#1c1608',bg3:'#251e0a',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#f0e8d0',text2:'#a89060',text3:'#6a5830'}
+  },
+  'Ocean Blue': {
+    accent:'#2e7ab8', accent2:'#1c5e96',
+    accentGlow:'rgba(46,122,184,0.14)',
+    light:{bg:'#f3f6fa',bg2:'#ffffff',bg3:'#e8eef5',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#0a1525',text2:'#3a5070',text3:'#7090b0'},
+    dark:{bg:'#080e18',bg2:'#0e1520',bg3:'#141e2c',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#d8e8f8',text2:'#6090b8',text3:'#304860'}
+  },
+  'Rose': {
+    accent:'#b84060', accent2:'#942848',
+    accentGlow:'rgba(184,64,96,0.14)',
+    light:{bg:'#faf4f5',bg2:'#ffffff',bg3:'#f5e8eb',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#1a080c',text2:'#6a3040',text3:'#b07080'},
+    dark:{bg:'#130608',bg2:'#1c0a0e',bg3:'#260e14',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#f8d8e0',text2:'#b87080',text3:'#6a3040'}
+  },
+  'Slate': {
+    accent:'#5a6a8a', accent2:'#3d506e',
+    accentGlow:'rgba(90,106,138,0.14)',
+    light:{bg:'#f4f5f7',bg2:'#ffffff',bg3:'#e8eaee',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#0d1020',text2:'#4a5060',text3:'#8090a8'},
+    dark:{bg:'#0a0c12',bg2:'#10131c',bg3:'#161a26',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#d8dce8',text2:'#7080a0',text3:'#3a4460'}
+  },
+  'Forest': {
+    accent:'#3a7a4a', accent2:'#285c38',
+    accentGlow:'rgba(58,122,74,0.14)',
+    light:{bg:'#f3f6f2',bg2:'#ffffff',bg3:'#e6ede4',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#081408',text2:'#3a5038',text3:'#6a8868'},
+    dark:{bg:'#060e06',bg2:'#0c140c',bg3:'#101c10',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#d0e8d0',text2:'#60a060',text3:'#305030'}
+  },
+  'Lavender': {
+    accent:'#7c68c8', accent2:'#5e4eaa',
+    accentGlow:'rgba(124,104,200,0.14)',
+    light:{bg:'#f6f4fa',bg2:'#ffffff',bg3:'#ede8f5',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',text:'#100c20',text2:'#504068',text3:'#9080b0'},
+    dark:{bg:'#0c0814',bg2:'#120e1e',bg3:'#181428',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',text:'#e0d8f8',text2:'#8870c8',text3:'#4838788'}
+  },
+  'Monochrome': {
+    accent:'#404040', accent2:'#282828',
+    accentGlow:'rgba(64,64,64,0.14)',
+    light:{bg:'#f5f5f5',bg2:'#ffffff',bg3:'#ebebeb',border:'rgba(0,0,0,0.09)',border2:'rgba(0,0,0,0.15)',text:'#111111',text2:'#555555',text3:'#999999'},
+    dark:{bg:'#0a0a0a',bg2:'#141414',bg3:'#1e1e1e',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.13)',text:'#eeeeee',text2:'#888888',text3:'#444444'}
+  }
+};
+
+let currentMode = 'light';
+let currentPalette = 'Sage Green';
+let currentFontSize = '14';
+
+function applyTheme(paletteName, mode, accentOverride) {
+  const palette = THEMES[paletteName] || THEMES['Sage Green'];
+  const modeVars = palette[mode] || palette.light;
+  const accent = accentOverride || palette.accent;
+  const accent2 = accentOverride ? shadeColor(accentOverride, -20) : palette.accent2;
+  const accentRgb = hexToRgb(accent);
+  const accentGlow = accentRgb ? `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0.15)` : palette.accentGlow;
+
+  const root = document.documentElement;
+  root.style.setProperty('--bg', modeVars.bg);
+  root.style.setProperty('--bg2', modeVars.bg2);
+  root.style.setProperty('--bg3', modeVars.bg3);
+  root.style.setProperty('--border', modeVars.border);
+  root.style.setProperty('--border2', modeVars.border2);
+  root.style.setProperty('--text', modeVars.text);
+  root.style.setProperty('--text2', modeVars.text2);
+  root.style.setProperty('--text3', modeVars.text3);
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--accent2', accent2);
+  root.style.setProperty('--accent-glow', accentGlow);
+
+  // Status colors adapt to mode
+  if(mode === 'light') {
+    root.style.setProperty('--green', '#2a8050');
+    root.style.setProperty('--amber', '#b87800');
+    root.style.setProperty('--red', '#b83030');
+    root.style.setProperty('--blue', '#2060a0');
+  } else {
+    root.style.setProperty('--green', '#34d399');
+    root.style.setProperty('--amber', '#fbbf24');
+    root.style.setProperty('--red', '#f87171');
+    root.style.setProperty('--blue', '#60a5fa');
+  }
+
+  document.body.style.fontSize = currentFontSize + 'px';
+  updateThemePanelUI(paletteName, mode);
+  saveThemePrefs(paletteName, mode, accentOverride);
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  applyTheme(currentPalette, mode);
+}
+
+function setPalette(name) {
+  currentPalette = name;
+  applyTheme(name, currentMode);
+}
+
+function setFontSize(size) {
+  currentFontSize = size;
+  document.body.style.fontSize = size + 'px';
+  document.querySelectorAll('.theme-size-btn').forEach(btn => {
+    btn.style.background = btn.dataset.size === size ? 'var(--accent)' : 'transparent';
+    btn.style.color = btn.dataset.size === size ? '#fff' : 'var(--text)';
+    btn.style.borderColor = btn.dataset.size === size ? 'var(--accent)' : 'var(--border2)';
+  });
+  saveThemePrefs(currentPalette, currentMode, null);
+}
+
+function applyCustomAccent() {
+  const color = document.getElementById('custom-accent-picker').value;
+  applyTheme(currentPalette, currentMode, color);
+}
+
+function updateThemePanelUI(paletteName, mode) {
+  // Mode buttons
+  const lightBtn = document.getElementById('mode-light');
+  const darkBtn = document.getElementById('mode-dark');
+  if(lightBtn && darkBtn) {
+    lightBtn.style.borderColor = mode==='light' ? 'var(--accent)' : 'var(--border)';
+    lightBtn.style.background = mode==='light' ? 'var(--accent-glow)' : 'transparent';
+    darkBtn.style.borderColor = mode==='dark' ? 'var(--accent)' : 'var(--border)';
+    darkBtn.style.background = mode==='dark' ? 'var(--accent-glow)' : 'transparent';
+  }
+  // Mode badge in sidebar
+  const badge = document.getElementById('theme-mode-badge');
+  if(badge) { badge.textContent = mode==='dark'?'Dark':'Light'; }
+  // Palette grid active state
+  document.querySelectorAll('.palette-btn').forEach(btn => {
+    const isActive = btn.dataset.name === paletteName;
+    btn.style.borderColor = isActive ? 'var(--accent)' : 'transparent';
+    btn.style.transform = isActive ? 'scale(1.04)' : 'scale(1)';
+  });
+}
+
+function renderPaletteGrid() {
+  const grid = document.getElementById('palette-grid');
+  if(!grid) return;
+  grid.innerHTML = Object.entries(THEMES).map(([name, theme])=>{
+    const isActive = name === currentPalette;
+    const sw = theme[currentMode] || theme.light;
+    const ac = theme.accent;
+    // Mini app preview — sidebar strip + content area
+    return `<button class="palette-btn" data-name="${name}" onclick="setPalette('${name}')"
+      style="padding:0;border-radius:10px;border:2px solid ${isActive?ac:'transparent'};cursor:pointer;text-align:left;transition:all .15s;transform:${isActive?'scale(1.02)':'scale(1)'};overflow:hidden;box-shadow:${isActive?`0 0 0 2px ${ac}44`:'0 1px 4px rgba(0,0,0,.12)'}">
+      <div style="display:flex;height:64px">
+        <!-- Mini sidebar -->
+        <div style="width:28px;background:${sw.bg2};border-right:1px solid ${sw.border2};display:flex;flex-direction:column;padding:5px 4px;gap:3px;flex-shrink:0">
+          <div style="width:20px;height:3px;border-radius:2px;background:${ac}"></div>
+          <div style="width:16px;height:2px;border-radius:2px;background:${sw.text3}"></div>
+          <div style="width:16px;height:2px;border-radius:2px;background:${sw.text3}"></div>
+          <div style="width:18px;height:2px;border-radius:2px;background:${ac}55;margin-top:2px"></div>
+          <div style="width:14px;height:2px;border-radius:2px;background:${sw.text3}"></div>
+          <div style="width:16px;height:2px;border-radius:2px;background:${sw.text3}"></div>
+        </div>
+        <!-- Mini content -->
+        <div style="flex:1;background:${sw.bg};padding:6px 7px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;gap:3px">
+            <div style="flex:1;height:10px;border-radius:3px;background:${sw.bg2};border:1px solid ${sw.border2}"></div>
+            <div style="width:20px;height:10px;border-radius:3px;background:${ac}"></div>
+          </div>
+          <div style="height:8px;border-radius:3px;background:${sw.bg2};border:1px solid ${sw.border2}"></div>
+          <div style="display:flex;gap:3px">
+            <div style="width:28px;height:6px;border-radius:10px;background:${ac}33"></div>
+            <div style="width:22px;height:6px;border-radius:10px;background:${sw.bg3}"></div>
+            <div style="width:24px;height:6px;border-radius:10px;background:${sw.bg3}"></div>
+          </div>
+          <div style="height:6px;border-radius:3px;background:${ac}22"></div>
+        </div>
+      </div>
+      <div style="padding:6px 8px;background:${sw.bg2};display:flex;align-items:center;gap:5px;border-top:1px solid ${sw.border}">
+        <div style="width:8px;height:8px;border-radius:50%;background:${ac};flex-shrink:0"></div>
+        <div style="font-size:11px;font-weight:${isActive?'600':'400'};color:${sw.text}">${name}</div>
+        ${isActive?`<div style="margin-left:auto;font-size:9px;color:${ac};font-weight:600">✓</div>`:''}
+      </div>
+    </button>`;
+  }).join('');
+}
+
+function openThemePanel() {
+  renderPaletteGrid();
+  updateThemePanelUI(currentPalette, currentMode);
+  document.querySelectorAll('.theme-size-btn').forEach(btn => {
+    btn.style.background = btn.dataset.size === currentFontSize ? 'var(--accent)' : 'transparent';
+    btn.style.color = btn.dataset.size === currentFontSize ? '#fff' : 'var(--text)';
+    btn.style.borderColor = btn.dataset.size === currentFontSize ? 'var(--accent)' : 'var(--border2)';
+  });
+  document.getElementById('theme-panel').style.display = 'flex';
+}
+
+function closeThemePanel() {
+  document.getElementById('theme-panel').style.display = 'none';
+}
+
+function saveThemePrefs(palette, mode, accentOverride) {
+  try {
+    localStorage.setItem('omwty_theme', JSON.stringify({palette, mode, accentOverride, fontSize:currentFontSize}));
+  } catch(e) {}
+}
+
+function loadThemePrefs() {
+  try {
+    const saved = localStorage.getItem('omwty_theme');
+    if(saved) {
+      const prefs = JSON.parse(saved);
+      currentPalette = prefs.palette || 'Sage Green';
+      currentMode = prefs.mode || 'light';
+      currentFontSize = prefs.fontSize || '14';
+      applyTheme(currentPalette, currentMode, prefs.accentOverride||null);
+    } else {
+      applyTheme('Sage Green', 'light');
+    }
+  } catch(e) {
+    applyTheme('Sage Green', 'light');
+  }
+}
+
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? {r:parseInt(r[1],16), g:parseInt(r[2],16), b:parseInt(r[3],16)} : null;
+}
+
+function shadeColor(hex, pct) {
+  const num = parseInt(hex.slice(1), 16);
+  const amt = Math.round(2.55 * pct);
+  const r = Math.min(255, Math.max(0, (num>>16) + amt));
+  const g = Math.min(255, Math.max(0, ((num>>8)&0xFF) + amt));
+  const b = Math.min(255, Math.max(0, (num&0xFF) + amt));
+  return '#'+(0x1000000+(r*0x10000)+(g*0x100)+b).toString(16).slice(1);
+}
+
+// ─── SIDEBAR TOGGLE ───────────────────────────────────────
+let sidebarCollapsed = false;
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const sidebar = document.getElementById('sidebar');
+  const icon = document.getElementById('collapse-icon');
+  sidebar.classList.toggle('collapsed', sidebarCollapsed);
+  if(icon) { icon.className = sidebarCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'; }
+  try { localStorage.setItem('omwty_sidebar_collapsed', sidebarCollapsed); } catch(e){}
+}
+
+function toggleMobileMenu() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobile-overlay');
+  const isOpen = sidebar.classList.contains('mobile-open');
+  sidebar.classList.toggle('mobile-open', !isOpen);
+  overlay.classList.toggle('active', !isOpen);
+}
+
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('mobile-overlay').classList.remove('active');
+}
+
+function loadSidebarState() {
+  try {
+    const saved = localStorage.getItem('omwty_sidebar_collapsed');
+    if(saved === 'true') {
+      sidebarCollapsed = true;
+      document.getElementById('sidebar').classList.add('collapsed');
+      const icon = document.getElementById('collapse-icon');
+      if(icon) icon.className = 'fas fa-chevron-right';
+    }
+  } catch(e) {}
+}
+
+// ─── BOOT ─────────────────────────────────────────────────
+loadThemePrefs();
+loadSidebarState();
+init();
+</script>
+</body>
+</html>
+<!-- ============================================================
+     PATCH: AI ASSISTANT + CHARACTER PROFILES + TIMELINE
+     Appended to index.html — inject via str_replace below
+============================================================ -->
