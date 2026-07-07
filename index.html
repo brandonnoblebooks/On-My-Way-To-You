@@ -199,6 +199,13 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 /* CHAPTERS */
 .chapter-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
 .chapter-card:hover{border-color:var(--border2)}
+/* Anonymous / interstitial entries */
+.anon-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid #9b6b9b;border-radius:var(--radius);padding:12px 15px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
+.anon-card:hover{border-color:var(--border2);border-left-color:#7a4a7a;box-shadow:0 2px 8px rgba(155,107,155,.1)}
+.anon-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9b6b9b;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.anon-author-badge{font-size:9px;padding:1px 7px;border-radius:8px;font-weight:600;letter-spacing:.04em}
+.anon-preview{font-size:13px;color:var(--text2);line-height:1.55;font-style:italic;margin-bottom:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.anon-meta{font-size:11px;color:var(--text3)}
 .chapter-top{display:flex;align-items:center;gap:10px}
 .chap-num{font-size:11px;color:var(--text3);min-width:50px}
 .chap-title{flex:1;font-size:14px;color:var(--text);font-weight:500}
@@ -358,6 +365,7 @@ select.form-input option{background:var(--bg2)}
     <div class="topbar" id="desktop-topbar">
       <div class="page-title" id="page-title">Dashboard</div>
       <div class="topbar-right" id="topbar-right">
+        <button class="btn" id="topbar-anon-btn" onclick="openAddAnonEntry()" style="display:none"><i class="fas fa-feather-alt" style="color:#9b6b9b"></i> Add Entry</button>
         <button class="btn btn-primary" onclick="topbarAction()"><i class="fas fa-plus" id="topbar-icon"></i><span id="topbar-label">New Chapter</span></button>
       </div>
     </div>
@@ -818,8 +826,58 @@ select.form-input option{background:var(--bg2)}
       <textarea id="entry-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:16px;font-size:13px;line-height:1.7;font-family:Georgia,serif;resize:none" placeholder="Write the entry here…"></textarea>
       <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
         <button class="btn btn-sm" onclick="copyEntry()" style="flex:1;justify-content:center"><i class="fas fa-copy"></i> Copy</button>
-        <button class="btn btn-sm btn-primary" onclick="saveEntryAsIdea()" style="flex:1;justify-content:center"><i class="fas fa-save"></i> Save to Ideas</button>
+        <button class="btn btn-sm btn-primary" onclick="saveEntryAsIdea()" style="flex:1;justify-content:center"><i class="fas fa-bookmark"></i> Save to Chapters</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ANONYMOUS ENTRY EDITOR OVERLAY -->
+<div id="anon-editor-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;flex-wrap:wrap">
+    <button class="btn btn-sm" onclick="closeAnonEditor()"><i class="fas fa-arrow-left"></i> Chapters</button>
+    <div style="flex:1;display:flex;align-items:center;gap:8px;min-width:160px">
+      <span id="anon-editor-label" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+      <span id="anon-editor-author" style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600"></span>
+      <input id="anon-editor-title" style="background:transparent;border:none;font-size:14px;font-weight:500;color:var(--text);outline:none;flex:1;min-width:80px;font-style:italic" placeholder="Internal title (optional)..."/>
+    </div>
+    <div style="font-size:12px;color:var(--text3);white-space:nowrap" id="anon-editor-wc">0 words</div>
+    <button class="btn btn-primary btn-sm" onclick="saveAnonEditor()" title="Save"><i class="fas fa-save"></i></button>
+    <button class="btn btn-sm" onclick="openEditAnonMeta()" title="Edit position and author" style="font-size:11px"><i class="fas fa-cog"></i></button>
+    <button class="btn btn-sm btn-danger" onclick="deleteAnonEntry()" title="Delete entry" style="padding:5px 8px"><i class="fas fa-trash"></i></button>
+  </div>
+  <textarea id="anon-editor-body" style="flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:40px max(40px,calc(50% - 380px));font-size:15px;line-height:1.85;font-family:Georgia,serif;resize:none;overflow-y:auto" placeholder="Write the entry here... this is what appears in the book." oninput="anonEditorWC()"></textarea>
+</div>
+
+<!-- ANONYMOUS ENTRY MODAL -->
+<div class="modal-bg" id="modal-anon-entry">
+  <div class="modal">
+    <div class="modal-title" id="anon-modal-title">Add Anonymous Entry</div>
+    <div class="form-group">
+      <label class="form-label">Appears after Chapter</label>
+      <select class="form-input" id="anon-after-chapter">
+        <option value="">-- Select position --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Internal Author</label>
+      <select class="form-input" id="anon-internal-author">
+        <option value="Grace">Grace</option>
+        <option value="Natalie">Natalie</option>
+        <option value="Lucy">Lucy</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Internal Title (optional)</label>
+      <input class="form-input" id="anon-entry-title" placeholder="e.g. Grace -- the unsent text"/>
+    </div>
+    <div style="padding:8px 10px;background:var(--accent-glow);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);margin-bottom:4px">
+      <i class="fas fa-eye-slash" style="margin-right:5px;color:var(--accent)"></i>Author and title are internal only -- never shown to readers.
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-anon-entry')">Cancel</button>
+      <button class="btn btn-danger" id="anon-delete-btn" onclick="deleteAnonEntry()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveAnonEntry()">Save</button>
     </div>
   </div>
 </div>
@@ -1114,7 +1172,7 @@ async function init() {
     loadChapters(), loadIdeas(), loadDocuments(),
     loadActivity(), loadDiscussion(), loadAiChats(),
     loadCharacters(), loadTimeline(), loadTasks(),
-    loadMilestones(), loadSessions()
+    loadMilestones(), loadSessions(), loadAnonEntries()
   ].map(p => p.catch(e => console.warn('Load error (non-fatal):', e))));
   renderDashboard();
   setupRealtime();
@@ -1205,37 +1263,64 @@ async function loadChapters() {
   if(d) chapters = d;
 }
 
+function anonAuthorColor(author) {
+  return {grace:'#3b82f6',natalie:'#8b5cf6',lucy:'#f59e0b'}[author.toLowerCase()]||'#9b6b9b';
+}
+
 function renderChapters() {
   const el = document.getElementById('chapters-list');
   if(!chapters.length) {
     el.innerHTML=`<div class="empty-state"><i class="fas fa-list-ol"></i><p style="margin-bottom:12px">No chapters yet</p><button class="btn btn-primary" onclick="seedChaptersFromSpine()"><i class="fas fa-magic"></i> Load All 36 Chapters from Story Spine</button></div>`;
     return;
   }
-  const sorted = [...chapters].sort((a,b)=>a.number-b.number);
-  el.innerHTML = sorted.map(c=>{
-    const authName = c.author_id||'';
-    const pct = {outline:5,draft:35,review:75,done:100}[c.status]||0;
-    const hasBody = c.body&&c.body.trim().length>0;
-    const statuses = ['outline','draft','review','done'];
-    const statusBtns = statuses.map(s=>`<button
-      onclick="quickSetStatus(event,'${c.id}','${s}')"
-      title="Set to ${statusLabel(s)}"
-      style="padding:3px 8px;font-size:10px;border-radius:10px;border:1px solid ${c.status===s?'transparent':'var(--border)'};background:${c.status===s?statusColor(s):'transparent'};color:${c.status===s?'#fff':statusColor(s)};cursor:pointer;transition:all .12s;font-weight:${c.status===s?'600':'400'}"
-      onmouseover="if('${s}'!=='${c.status}')this.style.background='${statusColor(s)}22'"
-      onmouseout="if('${s}'!=='${c.status}')this.style.background='transparent'"
-    >${statusLabel(s)}</button>`).join('');
-    return `<div class="chapter-card" onclick="openChapterEditor('${c.id}')">
-      <div class="chapter-top">
-        <div class="chap-num">Ch. ${c.number}</div>
-        <div class="chap-title">${escHtml(c.title)}</div>
-        ${hasBody?'<i class="fas fa-pen-nib" title="Has written content" style="font-size:10px;color:var(--accent);opacity:.6"></i>':''}
-      </div>
-      <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap" onclick="event.stopPropagation()">
-        ${statusBtns}
-      </div>
-      <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':'0 words'} ${authName?'· '+authName:''}</div>
-    </div>`;
+
+  // Interleave chapters and anon entries by sort position
+  const items = [
+    ...chapters.map(c => ({type:'chapter', sort: c.number, data: c})),
+    ...anonEntries.map(e => ({type:'anon', sort: e.after_chapter + 0.5, data: e}))
+  ].sort((a,b) => a.sort - b.sort);
+
+  el.innerHTML = items.map(item => {
+    if(item.type === 'chapter') {
+      const c = item.data;
+      const pct = {outline:5,draft:35,review:75,done:100}[c.status]||0;
+      const hasBody = c.body&&c.body.trim().length>0;
+      const statuses = ['outline','draft','review','done'];
+      const statusBtns = statuses.map(s=>`<button
+        onclick="quickSetStatus(event,'${c.id}','${s}')"
+        title="Set to ${statusLabel(s)}"
+        style="padding:3px 8px;font-size:10px;border-radius:10px;border:1px solid ${c.status===s?'transparent':'var(--border)'};background:${c.status===s?statusColor(s):'transparent'};color:${c.status===s?'#fff':statusColor(s)};cursor:pointer;transition:all .12s;font-weight:${c.status===s?'600':'400'}"
+        onmouseover="if('${s}'!=='${c.status}')this.style.background='${statusColor(s)}22'"
+        onmouseout="if('${s}'!=='${c.status}')this.style.background='transparent'"
+      >${statusLabel(s)}</button>`).join('');
+      return `<div class="chapter-card" onclick="openChapterEditor('${c.id}')">
+        <div class="chapter-top">
+          <div class="chap-num">Ch. ${c.number}</div>
+          <div class="chap-title">${escHtml(c.title)}</div>
+          ${hasBody?'<i class="fas fa-pen-nib" title="Has written content" style="font-size:10px;color:var(--accent);opacity:.6"></i>':''}
+        </div>
+        <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap" onclick="event.stopPropagation()">
+          ${statusBtns}
+        </div>
+        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="chap-meta">${c.word_count?c.word_count.toLocaleString()+' words':'0 words'}</div>
+      </div>`;
+    } else {
+      const e = item.data;
+      const col = anonAuthorColor(e.internal_author);
+      const preview = e.content ? e.content.replace(/\n/g,' ').slice(0,120)+(e.content.length>120?'…':'') : 'No content yet';
+      const title = e.title || 'Anonymous Entry';
+      return `<div class="anon-card" onclick="openAnonEditor('${e.id}')">
+        <div class="anon-label">
+          <i class="fas fa-feather-alt" style="font-size:9px"></i>
+          After Ch. ${e.after_chapter}
+          <span class="anon-author-badge" style="background:${col}18;color:${col}">${escHtml(e.internal_author||'—')}</span>
+          <span style="margin-left:auto;opacity:.5;font-weight:400">${e.word_count?e.word_count.toLocaleString()+' w':''}</span>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px;font-family:Georgia,serif">${escHtml(title)}</div>
+        <div class="anon-preview">${escHtml(preview)}</div>
+      </div>`;
+    }
   }).join('');
 }
 
@@ -1618,6 +1703,8 @@ function showTab(tab, el) {
   if(cfg) {
     document.getElementById('page-title').textContent = cfg.title;
     document.getElementById('topbar-label').textContent = cfg.action;
+    const anonBtn = document.getElementById('topbar-anon-btn');
+    if(anonBtn) anonBtn.style.display = tab==='chapters' ? 'inline-flex' : 'none';
     // Sync mobile topbar title
     const mobileTitle = document.getElementById('mobile-page-title');
     if(mobileTitle) mobileTitle.textContent = cfg.title;
@@ -1641,7 +1728,7 @@ function showTab(tab, el) {
 }
 
 async function backgroundRefresh(tab) {
-  if(tab==='chapters') { await loadChapters(); renderChapters(); }
+  if(tab==='chapters') { await loadChapters(); await loadAnonEntries(); renderChapters(); }
   else if(tab==='ideas') { await loadIdeas(); renderIdeas(); }
   else if(tab==='docs') { await loadDocuments(); renderDocuments(); }
   else if(tab==='discuss') { await loadDiscussion(); renderDiscussion(); }
@@ -2758,6 +2845,8 @@ function runDriftCheck() {
 
 // ─── CO-AUTHOR PASSAGE NOTES ──────────────────────────────
 let passageNotes = [];
+let anonEntries = [];
+let editingAnonId = null;
 
 function checkTextSelection() {
   const sel = window.getSelection();
@@ -2856,11 +2945,143 @@ async function saveEntryAsIdea() {
   const text=document.getElementById('entry-body').value.trim();
   if(!text){toast('Nothing to save');return;}
   const char=document.getElementById('entry-character').value;
-  const content=`[Anonymous Entry — ${char.charAt(0).toUpperCase()+char.slice(1)} voice]\n\n${text}`;
-  await sb('ideas',{method:'POST',body:JSON.stringify({category:'misc',content,author_id:currentDisplayName}),headers:{...h,'Prefer':'return=representation'}});
-  await loadIdeas();
-  toast('Entry saved to Idea Board!');
+  const authorName=char.charAt(0).toUpperCase()+char.slice(1);
+  // Find current chapter number from editor
+  const chap = chapters.find(c=>c.id===editorChapterId);
+  const afterChapter = chap ? chap.number : 1;
+  const wc = text.trim().split(/\s+/).length;
+  await sb('anonymous_entries',{method:'POST',body:JSON.stringify({
+    after_chapter: afterChapter,
+    content: text,
+    internal_author: authorName,
+    word_count: wc,
+    title: `${authorName} — after Ch. ${afterChapter}`
+  }),headers:{...h,'Prefer':'return=representation'}});
+  await loadAnonEntries();
+  document.getElementById('entry-body').value='';
+  toast(`Entry saved — will appear after Ch. ${afterChapter}`);
 }
+
+// ─── ANONYMOUS ENTRIES ────────────────────────────────────
+
+async function loadAnonEntries() {
+  const d = await sb('anonymous_entries?order=after_chapter,created_at');
+  if(d) anonEntries = d;
+}
+
+function openAddAnonEntry() {
+  editingAnonId = null;
+  document.getElementById('anon-modal-title').textContent = 'Add Anonymous Entry';
+  document.getElementById('anon-after-chapter').innerHTML = '<option value="">-- Select position --</option>'
+    + chapters.sort((a,b)=>a.number-b.number).map(c=>`<option value="${c.number}">After Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  document.getElementById('anon-internal-author').value = 'Grace';
+  document.getElementById('anon-entry-title').value = '';
+  document.getElementById('anon-delete-btn').style.display = 'none';
+  openModal('modal-anon-entry');
+}
+
+function openAnonEditor(id) {
+  const e = anonEntries.find(x=>x.id===id);
+  if(!e) return;
+  editingAnonId = id;
+  const col = anonAuthorColor(e.internal_author||'');
+  document.getElementById('anon-editor-label').textContent = `After Ch. ${e.after_chapter}`;
+  document.getElementById('anon-editor-author').textContent = e.internal_author||'Unknown';
+  document.getElementById('anon-editor-author').style.color = col;
+  document.getElementById('anon-editor-author').style.background = col+'18';
+  document.getElementById('anon-editor-body').value = e.content||'';
+  document.getElementById('anon-editor-title').value = e.title||'';
+  anonEditorWC();
+  document.getElementById('anon-editor-overlay').style.display = 'flex';
+  setTimeout(()=>document.getElementById('anon-editor-body').focus(),80);
+}
+
+function closeAnonEditor() {
+  document.getElementById('anon-editor-overlay').style.display = 'none';
+  editingAnonId = null;
+}
+
+function anonEditorWC() {
+  const body = document.getElementById('anon-editor-body').value;
+  const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('anon-editor-wc').textContent = wc.toLocaleString() + ' words';
+}
+
+async function saveAnonEditor() {
+  if(!editingAnonId) return;
+  const content = document.getElementById('anon-editor-body').value;
+  const title = document.getElementById('anon-editor-title').value.trim();
+  const wc = content.trim() ? content.trim().split(/\s+/).length : 0;
+  await sb(`anonymous_entries?id=eq.${editingAnonId}`,{method:'PATCH',body:JSON.stringify({content,title,word_count:wc,updated_at:new Date().toISOString()})});
+  const idx = anonEntries.findIndex(e=>e.id===editingAnonId);
+  if(idx>=0) Object.assign(anonEntries[idx],{content,title,word_count:wc});
+  renderChapters();
+  toast('Saved');
+}
+
+function openEditAnonMeta() {
+  const e = anonEntries.find(x=>x.id===editingAnonId);
+  if(!e) return;
+  document.getElementById('anon-modal-title').textContent = 'Edit Entry';
+  document.getElementById('anon-after-chapter').innerHTML = '<option value="">-- Select position --</option>'
+    + chapters.sort((a,b)=>a.number-b.number).map(c=>`<option value="${c.number}"${c.number===e.after_chapter?' selected':''}>After Ch. ${c.number} — ${escHtml(c.title)}</option>`).join('');
+  document.getElementById('anon-internal-author').value = e.internal_author||'Grace';
+  document.getElementById('anon-entry-title').value = e.title||'';
+  document.getElementById('anon-delete-btn').style.display = 'inline-flex';
+  openModal('modal-anon-entry');
+}
+
+async function saveAnonEntry() {
+  const afterChapter = parseInt(document.getElementById('anon-after-chapter').value);
+  if(!afterChapter) { toast('Set the chapter position first'); return; }
+  const author = document.getElementById('anon-internal-author').value;
+  const title = document.getElementById('anon-entry-title').value.trim() || `${author} — after Ch. ${afterChapter}`;
+  if(editingAnonId) {
+    await sb(`anonymous_entries?id=eq.${editingAnonId}`,{method:'PATCH',body:JSON.stringify({after_chapter:afterChapter,internal_author:author,title,updated_at:new Date().toISOString()})});
+    toast('Entry updated');
+  } else {
+    const res = await sb('anonymous_entries',{method:'POST',body:JSON.stringify({after_chapter:afterChapter,internal_author:author,title,content:'',word_count:0}),headers:{...h,'Prefer':'return=representation'}});
+    if(res&&res[0]) {
+      closeModal('modal-anon-entry');
+      await loadAnonEntries();
+      renderChapters();
+      openAnonEditor(res[0].id);
+      return;
+    }
+  }
+  closeModal('modal-anon-entry');
+  await loadAnonEntries();
+  renderChapters();
+  // Refresh editor header if open
+  if(editingAnonId) {
+    const e = anonEntries.find(x=>x.id===editingAnonId);
+    if(e) {
+      document.getElementById('anon-editor-label').textContent = `After Ch. ${e.after_chapter}`;
+      document.getElementById('anon-editor-author').textContent = e.internal_author||'';
+      const col = anonAuthorColor(e.internal_author||'');
+      document.getElementById('anon-editor-author').style.color = col;
+      document.getElementById('anon-editor-author').style.background = col+'18';
+    }
+  }
+}
+
+async function deleteAnonEntry() {
+  const id = editingAnonId || document.getElementById('anon-entry-title').dataset.id;
+  if(!id || !confirm('Delete this anonymous entry? This cannot be undone.')) return;
+  await sb(`anonymous_entries?id=eq.${id}`,{method:'DELETE'});
+  closeModal('modal-anon-entry');
+  closeAnonEditor();
+  await loadAnonEntries();
+  renderChapters();
+  toast('Entry deleted');
+}
+
+// Auto-save anon editor every 30s
+setInterval(async()=>{
+  if(editingAnonId && document.getElementById('anon-editor-overlay').style.display==='flex') {
+    await saveAnonEditor();
+  }
+},30000);
 
 // ─── SEARCH ───────────────────────────────────────────────
 let searchTimeout = null;
