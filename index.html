@@ -1264,6 +1264,7 @@ async function loadChapters() {
 }
 
 function anonAuthorColor(author) {
+  if(!author) return '#9b6b9b';
   return {grace:'#3b82f6',natalie:'#8b5cf6',lucy:'#f59e0b'}[author.toLowerCase()]||'#9b6b9b';
 }
 
@@ -2958,6 +2959,7 @@ async function saveEntryAsIdea() {
     title: `${authorName} — after Ch. ${afterChapter}`
   }),headers:{...h,'Prefer':'return=representation'}});
   await loadAnonEntries();
+  renderChapters();
   document.getElementById('entry-body').value='';
   toast(`Entry saved — will appear after Ch. ${afterChapter}`);
 }
@@ -2999,6 +3001,7 @@ function openAnonEditor(id) {
 function closeAnonEditor() {
   document.getElementById('anon-editor-overlay').style.display = 'none';
   editingAnonId = null;
+  renderChapters();
 }
 
 function anonEditorWC() {
