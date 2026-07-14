@@ -1270,6 +1270,7 @@ function anonAuthorColor(author) {
 
 function renderChapters() {
   const el = document.getElementById('chapters-list');
+  console.log('[renderChapters] chapters:', chapters.length, '| anonEntries:', anonEntries.length);
   if(!chapters.length) {
     el.innerHTML=`<div class="empty-state"><i class="fas fa-list-ol"></i><p style="margin-bottom:12px">No chapters yet</p><button class="btn btn-primary" onclick="seedChaptersFromSpine()"><i class="fas fa-magic"></i> Load All 36 Chapters from Story Spine</button></div>`;
     return;
@@ -2967,8 +2968,11 @@ async function saveEntryAsIdea() {
 // ─── ANONYMOUS ENTRIES ────────────────────────────────────
 
 async function loadAnonEntries() {
+  console.log('[AnonEntries] Fetching from Supabase...');
   const d = await sb('anonymous_entries?order=after_chapter,created_at');
+  console.log('[AnonEntries] Supabase returned:', JSON.stringify(d));
   if(d) anonEntries = d;
+  console.log('[AnonEntries] State now has', anonEntries.length, 'entries');
 }
 
 function openAddAnonEntry() {
