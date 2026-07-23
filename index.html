@@ -206,6 +206,26 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .anon-author-badge{font-size:9px;padding:1px 7px;border-radius:8px;font-weight:600;letter-spacing:.04em}
 .anon-preview{font-size:13px;color:var(--text2);line-height:1.55;font-style:italic;margin-bottom:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .anon-meta{font-size:11px;color:var(--text3)}
+/* ── BETA READER ── */
+.beta-chapter-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;margin-bottom:8px}
+.star-btn{background:none;border:none;cursor:pointer;font-size:22px;padding:2px 3px;line-height:1;transition:transform .1s;color:#ccc}
+.star-btn:hover,.star-btn.active{color:#f59e0b;transform:scale(1.15)}
+.feedback-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px}
+.feedback-reader-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--accent-glow);color:var(--accent)}
+/* ── SUBMISSION ── */
+.sub-doc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.sub-doc-header{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg3)}
+.sub-doc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
+.sub-doc-body{padding:14px}
+.sub-doc-textarea{width:100%;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);line-height:1.65;resize:vertical;min-height:80px;font-family:Georgia,serif}
+.agent-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:6px;cursor:pointer;transition:border-color .12s;display:flex;align-items:center;gap:10px}
+.agent-row:hover{border-color:var(--border2)}
+.status-pill{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.mode-toggle{display:flex;border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;width:fit-content}
+.mode-btn{padding:7px 18px;font-size:13px;border:none;cursor:pointer;transition:all .15s;font-family:inherit;font-weight:500}
+.mode-btn.active{background:var(--accent);color:#fff}
+.mode-btn:not(.active){background:transparent;color:var(--text2)}
+.mode-btn:not(.active):hover{background:var(--bg3)}
 .chapter-top{display:flex;align-items:center;gap:10px}
 .chap-num{font-size:11px;color:var(--text3);min-width:50px}
 .chap-title{flex:1;font-size:14px;color:var(--text);font-weight:500}
@@ -339,6 +359,9 @@ select.form-input option{background:var(--bg2)}
       <div class="nav-section">Writing</div>
       <div class="nav-item" onclick="showTab('tasks',this)"><i class="fas fa-tasks"></i><span class="nav-label">Tasks</span></div>
       <div class="nav-item" onclick="showTab('milestones',this)"><i class="fas fa-flag"></i><span class="nav-label">Milestones</span></div>
+      <div class="nav-section">Publishing</div>
+      <div class="nav-item" onclick="showTab('beta',this)"><i class="fas fa-users-cog"></i><span class="nav-label">Beta Readers</span></div>
+      <div class="nav-item" onclick="showTab('submission',this)"><i class="fas fa-paper-plane"></i><span class="nav-label">Submission</span></div>
       <div class="nav-section">Tools</div>
       <div class="nav-item" onclick="openSearch()"><i class="fas fa-search"></i><span class="nav-label">Search</span></div>
       <div class="nav-item" onclick="showTab('sessions',this)"><i class="fas fa-pen-nib"></i><span class="nav-label">Sessions</span></div>
@@ -611,9 +634,104 @@ select.form-input option{background:var(--bg2)}
         <div id="sessions-list" style="display:flex;flex-direction:column;gap:7px"></div>
       </div>
 
-    </div>
-  </div>
-</div>
+      <!-- BETA READERS TAB -->
+      <div id="tab-beta" class="tab">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px">Beta Reader Program</div>
+            <div style="font-size:13px;color:var(--text2)">Share the reader link with beta readers. Their feedback appears here organized by chapter.</div>
+          </div>
+          <button class="btn btn-primary" onclick="copyBetaLink()"><i class="fas fa-link"></i> Copy Reader Link</button>
+        </div>
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--accent)" id="beta-stat-readers">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Readers</div></div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--green)" id="beta-stat-responses">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Responses</div></div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--amber)" id="beta-stat-avg">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Avg Rating</div></div>
+        </div>
+        <!-- Filter -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <select class="form-input" id="beta-filter-reader" onchange="renderBetaFeedback()" style="flex:1;max-width:200px"><option value="">All Readers</option></select>
+          <select class="form-input" id="beta-filter-chapter" onchange="renderBetaFeedback()" style="flex:1;max-width:200px"><option value="">All Chapters</option></select>
+        </div>
+        <div id="beta-feedback-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- SUBMISSION TAB -->
+      <div id="tab-submission" class="tab">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="sub-mode-trad" onclick="setSubMode('traditional')">Traditional</button>
+            <button class="mode-btn" id="sub-mode-indie" onclick="setSubMode('indie')">Indie</button>
+          </div>
+          <button class="btn btn-primary" id="sub-generate-btn" onclick="generateSubmissionDocs()"><i class="fas fa-robot"></i> Generate with AI</button>
+        </div>
+
+        <!-- Loading state -->
+        <div id="sub-loading" style="display:none;text-align:center;padding:32px"><div class="spinner" style="width:28px;height:28px;margin:0 auto 14px;border-width:3px"></div><div id="sub-loading-msg" style="font-size:14px;color:var(--text2)">Building your materials…</div></div>
+
+        <!-- TRADITIONAL DOCS -->
+        <div id="sub-traditional">
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-quote-left" style="color:var(--accent)"></i><span class="sub-doc-label">Logline</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">1 sentence</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-logline" placeholder="One sentence that captures your book's essence…" style="min-height:60px" oninput="saveSubDoc('logline',this.value,'traditional')"></textarea></div>
+          </div>
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-align-left" style="color:var(--accent)"></i><span class="sub-doc-label">Short Synopsis</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">1–2 paragraphs for query</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-synopsis-short" placeholder="Brief synopsis for inclusion in your query letter…" style="min-height:140px" oninput="saveSubDoc('synopsis_short',this.value,'traditional')"></textarea></div>
+          </div>
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-file-alt" style="color:var(--accent)"></i><span class="sub-doc-label">Full Synopsis</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">1–2 pages, no cliffhangers</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-synopsis-full" placeholder="Complete synopsis covering all major plot points and the ending…" style="min-height:240px" oninput="saveSubDoc('synopsis_full',this.value,'traditional')"></textarea></div>
+          </div>
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-envelope" style="color:var(--accent)"></i><span class="sub-doc-label">Query Letter</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">hook · synopsis · bio · comps</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-query-letter" placeholder="Complete query letter draft…" style="min-height:300px" oninput="saveSubDoc('query_letter',this.value,'traditional')"></textarea></div>
+          </div>
+          <!-- Comp Titles -->
+          <div style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Comp Titles</div>
+              <button class="btn btn-sm" onclick="openModal('modal-comp')"><i class="fas fa-plus"></i> Add Comp</button>
+            </div>
+            <div id="comps-list"><div style="font-size:13px;color:var(--text3);font-style:italic">No comp titles yet</div></div>
+          </div>
+          <!-- Agent Tracker -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Agent Query Tracker</div>
+              <button class="btn btn-sm btn-primary" onclick="openAddAgent()"><i class="fas fa-plus"></i> Log Query</button>
+            </div>
+            <div id="agents-list"><div style="font-size:13px;color:var(--text3);font-style:italic">No queries logged yet</div></div>
+          </div>
+        </div>
+
+        <!-- INDIE DOCS -->
+        <div id="sub-indie" style="display:none">
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-quote-left" style="color:var(--accent)"></i><span class="sub-doc-label">Logline</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">1 sentence</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-logline-indie" placeholder="One sentence pitch…" style="min-height:60px" oninput="saveSubDoc('logline',this.value,'indie')"></textarea></div>
+          </div>
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-book-open" style="color:var(--accent)"></i><span class="sub-doc-label">Back Cover Copy</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">reader-facing blurb</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-back-cover" placeholder="The compelling blurb a reader sees before buying…" style="min-height:200px" oninput="saveSubDoc('back_cover',this.value,'indie')"></textarea></div>
+          </div>
+          <div class="sub-doc-card">
+            <div class="sub-doc-header"><i class="fas fa-gift" style="color:var(--accent)"></i><span class="sub-doc-label">ARC Pitch</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">for advance readers</span></div>
+            <div class="sub-doc-body"><textarea class="sub-doc-textarea" id="doc-arc-pitch" placeholder="Pitch to send to advance reader contacts…" style="min-height:160px" oninput="saveSubDoc('arc_pitch',this.value,'indie')"></textarea></div>
+          </div>
+          <!-- ARC Tracker -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">ARC Reader Tracker</div>
+              <button class="btn btn-sm btn-primary" onclick="openAddArc()"><i class="fas fa-plus"></i> Add ARC Reader</button>
+            </div>
+            <div id="arc-list"><div style="font-size:13px;color:var(--text3);font-style:italic">No ARC readers yet</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
 
 <!-- CHARACTER MODAL -->
 <div class="modal-bg" id="modal-character">
@@ -882,6 +1000,136 @@ select.form-input option{background:var(--bg2)}
   </div>
 </div>
 
+<!-- BETA READER OVERLAY -->
+<div id="beta-reader-overlay" style="display:none;position:fixed;inset:0;background:#111;z-index:500;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #333;flex-shrink:0;flex-wrap:wrap">
+    <button class="btn btn-sm" onclick="closeBetaReader()" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-times"></i></button>
+    <span style="font-size:13px;color:#888;font-style:italic;flex:1">On My Way To You</span>
+    <span style="font-size:12px;color:#666">Reading as: <strong id="beta-reader-name" style="color:#aaa"></strong></span>
+    <button class="btn btn-sm" onclick="betaPrev()" id="beta-prev" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-chevron-left"></i></button>
+    <span id="beta-indicator" style="font-size:12px;color:#666;white-space:nowrap"></span>
+    <button class="btn btn-sm" onclick="betaNext()" id="beta-next" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:50px 20px" id="beta-reader-body">
+    <div style="max-width:660px;margin:0 auto">
+      <div id="beta-content-area" style="color:#ddd;font-size:16px;line-height:1.9;font-family:Georgia,serif;margin-bottom:48px"></div>
+      <!-- Feedback form -->
+      <div id="beta-feedback-form" style="background:#1e1e1e;border:1px solid #333;border-radius:12px;padding:22px;margin-top:32px">
+        <div style="font-size:14px;font-weight:500;color:#ccc;margin-bottom:16px" id="beta-form-title">Your feedback on this chapter</div>
+        <div id="beta-already-submitted" style="display:none;background:#1a2a1a;border:1px solid #2a4a2a;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#6ab86a">
+          <i class="fas fa-check-circle" style="margin-right:6px"></i>You've already submitted feedback for this item. <button onclick="showBetaEditForm()" style="background:none;border:none;color:#6ab86a;cursor:pointer;text-decoration:underline;font-size:13px">Edit it</button>
+        </div>
+        <div id="beta-form-fields">
+          <div style="margin-bottom:16px">
+            <div style="font-size:12px;color:#888;margin-bottom:8px">Overall rating</div>
+            <div id="beta-stars" style="display:flex;gap:4px">
+              <button class="star-btn" data-val="1" onclick="setBetaRating(1)">★</button>
+              <button class="star-btn" data-val="2" onclick="setBetaRating(2)">★</button>
+              <button class="star-btn" data-val="3" onclick="setBetaRating(3)">★</button>
+              <button class="star-btn" data-val="4" onclick="setBetaRating(4)">★</button>
+              <button class="star-btn" data-val="5" onclick="setBetaRating(5)">★</button>
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:5px">How did this make you feel?</label>
+            <textarea id="beta-emotional" style="width:100%;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:9px 12px;font-size:13px;color:#ddd;resize:vertical;min-height:70px;outline:none;font-family:inherit" placeholder="Your emotional reaction…" onfocus="this.style.borderColor='#666'" onblur="this.style.borderColor='#444'"></textarea>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:5px">Anything that pulled you out of the story?</label>
+            <textarea id="beta-craft" style="width:100%;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:9px 12px;font-size:13px;color:#ddd;resize:vertical;min-height:70px;outline:none;font-family:inherit" placeholder="Pacing, confusion, word choice, anything…" onfocus="this.style.borderColor='#666'" onblur="this.style.borderColor='#444'"></textarea>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:5px">Additional notes</label>
+            <textarea id="beta-notes" style="width:100%;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:9px 12px;font-size:13px;color:#ddd;resize:vertical;min-height:60px;outline:none;font-family:inherit" placeholder="Anything else you want to share…" onfocus="this.style.borderColor='#666'" onblur="this.style.borderColor='#444'"></textarea>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-primary" onclick="submitBetaFeedback()" style="flex:1;justify-content:center"><i class="fas fa-paper-plane"></i> Submit Feedback</button>
+            <button class="btn" onclick="betaNext()" style="background:#2a2a2a;border-color:#444;color:#aaa">Skip <i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Comp Title -->
+<div class="modal-bg" id="modal-comp">
+  <div class="modal">
+    <div class="modal-title">Add Comp Title</div>
+    <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="comp-title" placeholder="Book title"/></div>
+    <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="comp-author" placeholder="Author name"/></div>
+    <div class="form-group"><label class="form-label">Year</label><input class="form-input" id="comp-year" type="number" placeholder="2023"/></div>
+    <div class="form-group"><label class="form-label">Why it's a comp</label><textarea class="form-input" id="comp-reason" placeholder="Audience overlap, tone, theme…"></textarea></div>
+    <input type="hidden" id="comp-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-comp')">Cancel</button>
+      <button class="btn btn-danger" id="comp-delete" onclick="deleteComp()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveComp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Agent Query -->
+<div class="modal-bg" id="modal-agent">
+  <div class="modal">
+    <div class="modal-title" id="modal-agent-title">Log Agent Query</div>
+    <div class="form-group"><label class="form-label">Agent Name *</label><input class="form-input" id="agent-name" placeholder="Agent name"/></div>
+    <div class="form-group"><label class="form-label">Agency</label><input class="form-input" id="agent-agency" placeholder="Agency name"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Query Date</label><input class="form-input" type="date" id="agent-date"/></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input" id="agent-status">
+          <option value="pending">Pending</option>
+          <option value="partial">Partial Request</option>
+          <option value="full">Full Request</option>
+          <option value="offer">Offer!</option>
+          <option value="pass">Pass</option>
+          <option value="closed">Closed (no response)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Response Date</label><input class="form-input" type="date" id="agent-response-date"/></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="agent-notes" placeholder="Any specifics about what they asked for or said…"></textarea></div>
+    <input type="hidden" id="agent-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-agent')">Cancel</button>
+      <button class="btn btn-danger" id="agent-delete" onclick="deleteAgent()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveAgent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add ARC Reader -->
+<div class="modal-bg" id="modal-arc">
+  <div class="modal">
+    <div class="modal-title" id="modal-arc-title">Add ARC Reader</div>
+    <div class="form-group"><label class="form-label">Reader Name *</label><input class="form-input" id="arc-name" placeholder="Reader name"/></div>
+    <div class="form-group"><label class="form-label">Contact (email, IG, etc.)</label><input class="form-input" id="arc-contact" placeholder="How to follow up"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Sent Date</label><input class="form-input" type="date" id="arc-date"/></div>
+      <div class="form-group"><label class="form-label">Format</label>
+        <select class="form-input" id="arc-format">
+          <option value="ebook">eBook</option>
+          <option value="pdf">PDF</option>
+          <option value="print">Print ARC</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Platform (where they'll post)</label><input class="form-input" id="arc-platform" placeholder="Goodreads, Instagram, BookTok…"/></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="arc-feedback" style="accent-color:var(--accent)"/> Feedback received</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="arc-posted" style="accent-color:var(--accent)"/> Review posted</label>
+    </div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="arc-notes" placeholder="Any other notes…"></textarea></div>
+    <input type="hidden" id="arc-id"/>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-arc')">Cancel</button>
+      <button class="btn btn-danger" id="arc-delete" onclick="deleteArc()" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveArc()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- PASSAGE NOTE MODAL -->
 <div class="modal-bg" id="modal-passage-note">
   <div class="modal">
@@ -1049,6 +1297,16 @@ select.form-input option{background:var(--bg2)}
       <div id="export-chapter-list" style="margin-top:8px;max-height:180px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="form-group">
+      <label class="form-label">Anonymous Entries</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-sm" onclick="exportEntriesAll()" style="font-size:11px">Select All</button>
+        <button class="btn btn-sm" onclick="exportEntriesNone()" style="font-size:11px">Clear</button>
+      </div>
+      <div id="export-entries-list" style="margin-top:8px;max-height:140px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;display:flex;flex-direction:column;gap:4px">
+        <div style="font-size:12px;color:var(--text3);font-style:italic">No anonymous entries yet</div>
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">Format</label>
       <select class="form-input" id="export-format">
         <option value="txt">Plain Text (.txt)</option>
@@ -1172,7 +1430,8 @@ async function init() {
     loadChapters(), loadIdeas(), loadDocuments(),
     loadActivity(), loadDiscussion(), loadAiChats(),
     loadCharacters(), loadTimeline(), loadTasks(),
-    loadMilestones(), loadSessions(), loadAnonEntries()
+    loadMilestones(), loadSessions(), loadAnonEntries(),
+    loadBetaFeedback(), loadSubmissionData()
   ].map(p => p.catch(e => console.warn('Load error (non-fatal):', e))));
   renderDashboard();
   setupRealtime();
@@ -1270,7 +1529,6 @@ function anonAuthorColor(author) {
 
 function renderChapters() {
   const el = document.getElementById('chapters-list');
-  console.log('[renderChapters] chapters:', chapters.length, '| anonEntries:', anonEntries.length);
   if(!chapters.length) {
     el.innerHTML=`<div class="empty-state"><i class="fas fa-list-ol"></i><p style="margin-bottom:12px">No chapters yet</p><button class="btn btn-primary" onclick="seedChaptersFromSpine()"><i class="fas fa-magic"></i> Load All 36 Chapters from Story Spine</button></div>`;
     return;
@@ -1663,9 +1921,9 @@ function renderDashboard() {
 function setupRealtime() {
   // Poll every 15 seconds for live updates
   setInterval(async()=>{
-    const prev = {ch:chapters.length, id:ideas.length, dc:documents.length, ds:discussion.length, ac:activity.length};
-    await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion()]);
-    if(chapters.length!==prev.ch && currentTab==='chapters') renderChapters();
+    const prev = {ch:chapters.length, id:ideas.length, dc:documents.length, ds:discussion.length, ac:activity.length, ae:anonEntries.length};
+    await Promise.all([loadChapters(),loadIdeas(),loadDocuments(),loadActivity(),loadDiscussion(),loadAnonEntries()]);
+    if((chapters.length!==prev.ch || anonEntries.length!==prev.ae) && currentTab==='chapters') renderChapters();
     if(ideas.length!==prev.id && currentTab==='ideas') renderIdeas();
     if(documents.length!==prev.dc && currentTab==='docs') renderDocuments();
     if(discussion.length!==prev.ds && currentTab==='discuss') renderDiscussion();
@@ -1687,6 +1945,8 @@ const tabConfig = {
   tasks:{title:'Tasks', action:'Add Task', actionFn:()=>openAddTask()},
   milestones:{title:'Milestones', action:'Add Milestone', actionFn:()=>openAddMilestone()},
   sessions:{title:'Writing Sessions', action:'Log Session', actionFn:()=>openAddSession()},
+  beta:{title:'Beta Readers', action:'Copy Reader Link', actionFn:copyBetaLink},
+  submission:{title:'Submission', action:'', actionFn:()=>{}},
 };
 
 // Track last render timestamps to avoid unnecessary re-renders
@@ -1724,6 +1984,8 @@ function showTab(tab, el) {
   else if(tab==='tasks') { populateTaskChapterSelect(); populateTaskAuthorSelect(); renderTasks(); }
   else if(tab==='milestones') renderMilestones();
   else if(tab==='sessions') renderSessions();
+  else if(tab==='beta') renderBetaTab();
+  else if(tab==='submission') renderSubmissionTab();
   else if(tab==='ai') { loadAiChats(); populateAiAuthorSelect(); }
   // Background refresh — fetch fresh data without blocking UI
   setTimeout(()=>backgroundRefresh(tab), 100);
@@ -1738,6 +2000,8 @@ async function backgroundRefresh(tab) {
   else if(tab==='tasks') { await loadTasks(); renderTasks(); }
   else if(tab==='milestones') { await loadMilestones(); renderMilestones(); }
   else if(tab==='sessions') { await loadSessions(); renderSessions(); }
+  else if(tab==='beta') { await loadBetaFeedback(); renderBetaTab(); }
+  else if(tab==='submission') { await loadSubmissionData(); renderSubmissionTab(); }
   else if(tab==='dashboard') { await Promise.all([loadChapters(),loadActivity()]); renderDashboard(); }
 }
 
@@ -2849,6 +3113,9 @@ function runDriftCheck() {
 let passageNotes = [];
 let anonEntries = [];
 let editingAnonId = null;
+let betaFeedback = [], submissionDocs = [], agentQueries = [], arcReaders = [], compTitles = [];
+let betaItems = [], betaIndex = 0, betaRating = 0, betaEditId = null;
+let subMode = 'traditional', subSaveTimers = {};
 
 function checkTextSelection() {
   const sel = window.getSelection();
@@ -2968,11 +3235,8 @@ async function saveEntryAsIdea() {
 // ─── ANONYMOUS ENTRIES ────────────────────────────────────
 
 async function loadAnonEntries() {
-  console.log('[AnonEntries] Fetching from Supabase...');
   const d = await sb('anonymous_entries?order=after_chapter,created_at');
-  console.log('[AnonEntries] Supabase returned:', JSON.stringify(d));
   if(d) anonEntries = d;
-  console.log('[AnonEntries] State now has', anonEntries.length, 'entries');
 }
 
 function openAddAnonEntry() {
@@ -3144,6 +3408,15 @@ function runSearch() {
         results.push({type:'document',icon:'fa-file-alt',color:'var(--blue)',label:d.name,preview:'',action:`viewDocument('${d.id}');closeSearch()`});
       }
     });
+    // Search anonymous entries
+    anonEntries.forEach(e=>{
+      if((e.content||'').toLowerCase().includes(q)||(e.title||'').toLowerCase().includes(q)){
+        const src=(e.content||'');
+        const idx=src.toLowerCase().indexOf(q);
+        const preview=idx>=0?src.slice(Math.max(0,idx-30),idx+80):'';
+        results.push({type:'entry',icon:'fa-feather-alt',color:'#9b6b9b',label:`Entry after Ch. ${e.after_chapter}${e.internal_author?' — '+e.internal_author:''}`,preview,action:`openAnonEditor('${e.id}');closeSearch()`});
+      }
+    });
     if(!results.length){el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);text-align:center">No results for "'+escHtml(q)+'"</div>';return;}
     el.innerHTML=results.slice(0,15).map((r,i)=>`
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'" onclick="${r.action}">
@@ -3292,9 +3565,12 @@ let readChapterIndex = 0;
 let readChapters = [];
 
 function openReadMode() {
-  readChapters = [...chapters].sort((a,b)=>a.number-b.number).filter(c=>c.body&&c.body.trim().length>0);
+  // Build interleaved list of chapters + anon entries sorted by position
+  const chapItems = chapters.filter(c=>c.body&&c.body.trim().length>0).map(c=>({type:'chapter',sort:c.number,data:c}));
+  const entryItems = anonEntries.filter(e=>e.content&&e.content.trim().length>0).map(e=>({type:'anon',sort:e.after_chapter+0.5,data:e}));
+  readChapters = [...chapItems,...entryItems].sort((a,b)=>a.sort-b.sort);
   if(!readChapters.length) {
-    toast('No written chapters yet — start writing first!');
+    toast('No written content yet — start writing first!');
     return;
   }
   readChapterIndex = 0;
@@ -3308,32 +3584,48 @@ function closeReadMode() {
 }
 
 function renderReadChapter() {
-  const c = readChapters[readChapterIndex];
-  if(!c) return;
+  const item = readChapters[readChapterIndex];
+  if(!item) return;
 
-  document.getElementById('read-mode-title').textContent = `Ch. ${c.number} — ${c.title}`;
-  document.getElementById('read-chapter-indicator').textContent = `Chapter ${readChapterIndex+1} of ${readChapters.length}`;
   document.getElementById('read-prev').disabled = readChapterIndex===0;
   document.getElementById('read-next').disabled = readChapterIndex===readChapters.length-1;
-
-  const body = c.body||'';
-  const paragraphs = body.split('\n').filter(p=>p.trim());
-  const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+  document.getElementById('read-chapter-indicator').textContent = `${readChapterIndex+1} of ${readChapters.length}`;
 
   const width = document.getElementById('read-width').value;
   const content = document.getElementById('read-mode-content');
   content.style.maxWidth = width+'px';
 
-  content.innerHTML = `
-    <div style="text-align:center;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <div style="font-size:12px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Chapter ${c.number}</div>
-      <div style="font-size:26px;font-weight:400;color:#e8e8e8;margin-bottom:8px">${escHtml(c.title)}</div>
-      ${c.pov?`<div style="font-size:12px;color:#666;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
-      <div style="font-size:11px;color:#444;margin-top:8px">${wc.toLocaleString()} words</div>
-    </div>
-    ${paragraphs.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}
-    <div style="text-align:center;margin-top:48px;color:#444;font-size:20px">* * *</div>
-  `;
+  if(item.type==='chapter') {
+    const c = item.data;
+    const body = c.body||'';
+    const paragraphs = body.split('\n').filter(p=>p.trim());
+    const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+    document.getElementById('read-mode-title').textContent = `Ch. ${c.number} — ${c.title}`;
+    content.innerHTML = `
+      <div style="text-align:center;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.08)">
+        <div style="font-size:12px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Chapter ${c.number}</div>
+        <div style="font-size:26px;font-weight:400;color:#e8e8e8;margin-bottom:8px">${escHtml(c.title)}</div>
+        ${c.pov?`<div style="font-size:12px;color:#666;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+        <div style="font-size:11px;color:#444;margin-top:8px">${wc.toLocaleString()} words</div>
+      </div>
+      ${paragraphs.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+      <div style="text-align:center;margin-top:48px;color:#444;font-size:20px">* * *</div>`;
+  } else {
+    const e = item.data;
+    const body = e.content||'';
+    const paragraphs = body.split('\n').filter(p=>p.trim());
+    const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+    document.getElementById('read-mode-title').textContent = `Entry — after Ch. ${e.after_chapter}`;
+    content.innerHTML = `
+      <div style="text-align:center;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:22px;color:#4a3a4a;margin-bottom:8px">—</div>
+        <div style="font-size:11px;color:#444;margin-top:8px">${wc.toLocaleString()} words</div>
+      </div>
+      <div style="font-style:italic">
+        ${paragraphs.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:48px;color:#444;font-size:20px">—</div>`;
+  }
 
   document.getElementById('read-mode-body').scrollTop = 0;
   updateReadProgress();
@@ -3390,6 +3682,26 @@ function openExportModal() {
   }).join('');
 
   updateExportSummary();
+
+  // Build anonymous entries checklist
+  const entriesList = document.getElementById('export-entries-list');
+  if(!anonEntries.length) {
+    entriesList.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic">No anonymous entries yet</div>';
+  } else {
+    const sorted = [...anonEntries].sort((a,b)=>a.after_chapter-b.after_chapter||(new Date(a.created_at)-new Date(b.created_at)));
+    entriesList.innerHTML = sorted.map(e=>{
+      const col = anonAuthorColor(e.internal_author);
+      const hasContent = e.content&&e.content.trim().length>0;
+      const label = e.title || `After Ch. ${e.after_chapter}`;
+      return `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:${hasContent?'var(--text)':'var(--text3)'};cursor:pointer;padding:2px 0">
+        <input type="checkbox" class="export-entry-cb" value="${e.id}" ${hasContent?'checked':''} style="accent-color:#9b6b9b" onchange="updateExportSummary()"/>
+        <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></span>
+        After Ch. ${e.after_chapter} — ${escHtml(label)}
+        <span style="margin-left:auto;color:var(--text3);font-size:11px">${hasContent?(e.word_count||0).toLocaleString()+' w':'no content'}</span>
+      </label>`;
+    }).join('');
+  }
+
   openModal('modal-export');
 }
 
@@ -3409,11 +3721,25 @@ function exportSelectWritten() {
   });
   updateExportSummary();
 }
-
+function exportEntriesAll() {
+  document.querySelectorAll('.export-entry-cb').forEach(cb=>cb.checked=true);
+  updateExportSummary();
+}
+function exportEntriesNone() {
+  document.querySelectorAll('.export-entry-cb').forEach(cb=>cb.checked=false);
+  updateExportSummary();
+}
 function updateExportSummary() {
-  const selected = [...document.querySelectorAll('.export-chap-cb:checked')].map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean);
-  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
-  document.getElementById('export-summary').textContent = `${selected.length} chapter${selected.length!==1?'s':''} selected · ${totalWc.toLocaleString()} words total`;
+  const selChaps = [...document.querySelectorAll('.export-chap-cb:checked')].map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean);
+  const selEntries = [...document.querySelectorAll('.export-entry-cb:checked')].map(cb=>anonEntries.find(e=>e.id===cb.value)).filter(Boolean);
+  const chapWc = selChaps.reduce((s,c)=>s+(c.word_count||0),0);
+  const entryWc = selEntries.reduce((s,e)=>s+(e.word_count||0),0);
+  const parts=[];
+  if(selChaps.length) parts.push(`${selChaps.length} chapter${selChaps.length!==1?'s':''}`);
+  if(selEntries.length) parts.push(`${selEntries.length} entr${selEntries.length!==1?'ies':'y'}`);
+  document.getElementById('export-summary').textContent = parts.length
+    ? `${parts.join(' + ')} · ${(chapWc+entryWc).toLocaleString()} words`
+    : 'Nothing selected';
 }
 
 function runExport() {
@@ -3424,102 +3750,130 @@ function runExport() {
   const incWc = document.getElementById('export-inc-wc').checked;
   const incPov = document.getElementById('export-inc-pov').checked;
 
-  const selected = [...document.querySelectorAll('.export-chap-cb:checked')]
+  const selectedChaps = [...document.querySelectorAll('.export-chap-cb:checked')]
     .map(cb=>chapters.find(c=>c.id===cb.value)).filter(Boolean)
     .sort((a,b)=>a.number-b.number);
 
-  if(!selected.length) { toast('Select at least one chapter'); return; }
+  const selectedEntries = [...document.querySelectorAll('.export-entry-cb:checked')]
+    .map(cb=>anonEntries.find(e=>e.id===cb.value)).filter(Boolean)
+    .sort((a,b)=>a.after_chapter-b.after_chapter);
+
+  if(!selectedChaps.length && !selectedEntries.length) { toast('Select at least one chapter or entry'); return; }
+
+  // Build interleaved list sorted by story position
+  const exportItems = [
+    ...selectedChaps.map(c=>({type:'chapter',sort:c.number,data:c})),
+    ...selectedEntries.map(e=>({type:'anon',sort:e.after_chapter+0.5,data:e}))
+  ].sort((a,b)=>a.sort-b.sort);
 
   let output = '';
-  const totalWc = selected.reduce((s,c)=>s+(c.word_count||0),0);
+  const totalWc = selectedChaps.reduce((s,c)=>s+(c.word_count||0),0)
+    + selectedEntries.reduce((s,e)=>s+(e.word_count||0),0);
 
   if(format==='pdf') {
-    // Build HTML then open print dialog
-    const chapHtmlPdf = selected.map(c=>`
-      <div style="margin-bottom:60px;page-break-after:always">
-        <div style="text-align:center;margin-bottom:36px">
-          <div style="font-size:11px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
-          <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px;font-family:Georgia,serif">${escHtml(c.title)}</h2>
-          ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
-          ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
-        </div>
-        ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic;font-family:Georgia,serif">${escHtml(c.notes)}</div>`:''}
-        <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
-          ${(c.body||'<em>No content written yet.</em>').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
-        </div>
-        <div style="text-align:center;margin-top:40px;color:#ccc;font-family:Georgia,serif">* * *</div>
-      </div>`).join('');
+    const chapHtmlPdf = exportItems.map(item=>{
+      if(item.type==='chapter') {
+        const c=item.data;
+        return `<div style="margin-bottom:60px;page-break-after:always">
+          <div style="text-align:center;margin-bottom:36px">
+            <div style="font-size:11px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
+            <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px;font-family:Georgia,serif">${escHtml(c.title)}</h2>
+            ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+            ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
+          </div>
+          ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic;font-family:Georgia,serif">${escHtml(c.notes)}</div>`:''}
+          <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
+            ${(c.body||'').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+          </div>
+          <div style="text-align:center;margin-top:40px;color:#ccc;font-family:Georgia,serif">* * *</div>
+        </div>`;
+      } else {
+        const e=item.data;
+        return `<div style="margin-bottom:60px;page-break-after:always">
+          <div style="text-align:center;margin-bottom:36px">
+            <div style="font-size:22px;color:#ccc;font-family:Georgia,serif">—</div>
+          </div>
+          <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333;font-style:italic">
+            ${(e.content||'').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+          </div>
+          <div style="text-align:center;margin-top:40px;color:#ccc;font-family:Georgia,serif">—</div>
+        </div>`;
+      }
+    }).join('');
 
     const pdfWin = window.open('','_blank');
     pdfWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
-    <style>
-      body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}
-      @media print{
-        body{margin:0;max-width:none;padding:40px}
-        .chapter{page-break-after:always}
-        .no-print{display:none}
-      }
-    </style></head><body>
+    <style>body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}@media print{body{margin:0;max-width:none;padding:40px}.chapter{page-break-after:always}.no-print{display:none}}</style></head><body>
     <div class="no-print" style="background:#f0f0f0;padding:12px 16px;margin-bottom:24px;border-radius:6px;font-family:sans-serif;font-size:13px">
-      <strong>Ready to save as PDF</strong> — press <strong>Cmd+P</strong> (Mac) or <strong>Ctrl+P</strong> (Windows), then choose "Save as PDF" as the destination.
+      <strong>Ready to save as PDF</strong> — press <strong>Cmd+P</strong> (Mac) or <strong>Ctrl+P</strong> (Windows), then choose "Save as PDF".
       <button onclick="window.print()" style="margin-left:12px;padding:6px 14px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Print / Save PDF</button>
     </div>
     <div style="text-align:center;margin-bottom:80px;padding-bottom:40px;border-bottom:1px solid #eee">
       <h1 style="font-size:32px;font-weight:400;margin:0 0 12px;font-family:Georgia,serif">${escHtml(title)}</h1>
       ${authorStr?`<div style="font-size:16px;color:#777;font-style:italic;font-family:Georgia,serif">by ${escHtml(authorStr)}</div>`:''}
-      <div style="font-size:13px;color:#aaa;margin-top:12px;font-family:sans-serif">${totalWc.toLocaleString()} words · ${selected.length} chapters</div>
+      <div style="font-size:13px;color:#aaa;margin-top:12px;font-family:sans-serif">${totalWc.toLocaleString()} words · ${selectedChaps.length} chapters</div>
     </div>
-    ${chapHtmlPdf}
-    </body></html>`);
+    ${chapHtmlPdf}</body></html>`);
     pdfWin.document.close();
     closeModal('modal-export');
     toast(`PDF ready — use Cmd/Ctrl+P to save`);
     return;
 
   } else if(format==='docx') {
-    // Generate RTF (opens in Word/Pages/Docs)
     let rtf = `{\\rtf1\\ansi\\deff0\n{\\fonttbl{\\f0 Georgia;}{\\f1 Arial;}}\n{\\colortbl;\\red51\\green51\\blue51;\\red153\\green153\\blue153;}\n\\paperw12240\\paperh15840\\margl1800\\margr1800\\margt1440\\margb1440\n`;
     rtf += `\\pard\\qc\\f0\\fs48\\b ${title.replace(/[\\{}]/g,'')}`+'\\b0'+`\\par\n`;
     if(authorStr) rtf += `\\f1\\fs24\\cf2 by ${authorStr.replace(/[\\{}]/g,'')}\\cf0\\par\n`;
-    rtf += `\\f1\\fs20\\cf2 ${totalWc.toLocaleString()} words · ${selected.length} chapters\\cf0\\par\\par\n`;
+    rtf += `\\f1\\fs20\\cf2 ${totalWc.toLocaleString()} words · ${selectedChaps.length} chapters\\cf0\\par\\par\n`;
 
-    selected.forEach(c => {
-      rtf += `\\page\\pard\\qc\\f1\\fs20\\cf2 CHAPTER ${c.number}\\cf0\\par\n`;
-      rtf += `\\f0\\fs36\\b ${(c.title||'').replace(/[\\{}]/g,'')}\\b0\\par\n`;
-      if(incPov&&c.pov) rtf += `\\f1\\fs20\\i\\cf2 ${c.pov}'s POV\\cf0\\i0\\par\n`;
-      if(incWc) rtf += `\\f1\\fs18\\cf2 ${(c.word_count||0).toLocaleString()} words\\cf0\\par\n`;
-      rtf += `\\par\n`;
-      if(incBrief&&c.notes) {
-        rtf += `\\f1\\fs20\\cf2\\i Brief: ${c.notes.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\i0\\cf0\\par\\par\n`;
+    exportItems.forEach(item => {
+      if(item.type==='chapter') {
+        const c=item.data;
+        rtf += `\\page\\pard\\qc\\f1\\fs20\\cf2 CHAPTER ${c.number}\\cf0\\par\n`;
+        rtf += `\\f0\\fs36\\b ${(c.title||'').replace(/[\\{}]/g,'')}\\b0\\par\n`;
+        if(incPov&&c.pov) rtf += `\\f1\\fs20\\i\\cf2 ${c.pov}'s POV\\cf0\\i0\\par\n`;
+        if(incWc) rtf += `\\f1\\fs18\\cf2 ${(c.word_count||0).toLocaleString()} words\\cf0\\par\n`;
+        rtf += `\\par\n`;
+        if(incBrief&&c.notes) rtf += `\\f1\\fs20\\cf2\\i Brief: ${c.notes.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\i0\\cf0\\par\\par\n`;
+        (c.body||'').split('\n').filter(p=>p.trim()).forEach(p=>{
+          rtf += `\\pard\\fi360\\f0\\fs24 ${p.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\par\n`;
+        });
+        rtf += `\\pard\\qc\\f0\\fs24 * * *\\par\n`;
+      } else {
+        const e=item.data;
+        rtf += `\\page\\pard\\qc\\f0\\fs28\\cf2 \u2014\\cf0\\par\\par\n`;
+        (e.content||'').split('\n').filter(p=>p.trim()).forEach(p=>{
+          rtf += `\\pard\\fi360\\f0\\fs24\\i ${p.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\i0\\par\n`;
+        });
+        rtf += `\\pard\\qc\\f0\\fs28\\cf2 \u2014\\cf0\\par\n`;
       }
-      const paras = (c.body||'No content written yet.').split('\n').filter(p=>p.trim());
-      paras.forEach(p => {
-        rtf += `\\pard\\fi360\\f0\\fs24 ${p.replace(/[\\{}]/g,'').replace(/\n/g,' ')}\\par\n`;
-      });
-      rtf += `\\pard\\qc\\f0\\fs24 * * *\\par\n`;
     });
     rtf += '}';
 
     downloadFile(title.replace(/\s+/g,'_')+'.rtf', rtf, 'application/rtf');
     closeModal('modal-export');
-    toast(`Word-compatible RTF exported — opens in Word, Pages, or Google Docs`);
+    toast(`Word-compatible RTF exported`);
     return;
   }
 
   if(format==='txt') {
     output += `${title.toUpperCase()}\n`;
     if(authorStr) output += `by ${authorStr}\n`;
-    output += `\n${totalWc.toLocaleString()} words · ${selected.length} chapters\n`;
+    output += `\n${totalWc.toLocaleString()} words · ${selectedChaps.length} chapters\n`;
     output += '\n' + '─'.repeat(60) + '\n\n';
 
-    selected.forEach(c=>{
-      output += `CHAPTER ${c.number}\n${c.title.toUpperCase()}\n`;
-      if(incPov&&c.pov) output += `[${c.pov}'s POV]\n`;
-      if(incWc) output += `[${(c.word_count||0).toLocaleString()} words]\n`;
-      output += '\n';
-      if(incBrief&&c.notes) output += `[BRIEF: ${c.notes}]\n\n`;
-      output += (c.body||'[No content written yet]') + '\n\n';
-      output += '* * *\n\n';
+    exportItems.forEach(item=>{
+      if(item.type==='chapter') {
+        const c=item.data;
+        output += `CHAPTER ${c.number}\n${c.title.toUpperCase()}\n`;
+        if(incPov&&c.pov) output += `[${c.pov}'s POV]\n`;
+        if(incWc) output += `[${(c.word_count||0).toLocaleString()} words]\n`;
+        output += '\n';
+        if(incBrief&&c.notes) output += `[BRIEF: ${c.notes}]\n\n`;
+        output += (c.body||'[No content]') + '\n\n* * *\n\n';
+      } else {
+        const e=item.data;
+        output += '—\n\n' + (e.content||'') + '\n\n—\n\n';
+      }
     });
 
     downloadFile(title.replace(/\s+/g,'_')+'.txt', output, 'text/plain');
@@ -3527,35 +3881,54 @@ function runExport() {
   } else if(format==='md') {
     output += `# ${title}\n`;
     if(authorStr) output += `*by ${authorStr}*\n\n`;
-    output += `---\n*${totalWc.toLocaleString()} words · ${selected.length} chapters*\n\n---\n\n`;
+    output += `---\n*${totalWc.toLocaleString()} words · ${selectedChaps.length} chapters*\n\n---\n\n`;
 
-    selected.forEach(c=>{
-      output += `## Chapter ${c.number}: ${c.title}\n\n`;
-      if(incPov&&c.pov) output += `*${c.pov}'s POV*`;
-      if(incWc) output += ` · *${(c.word_count||0).toLocaleString()} words*`;
-      if(incPov||incWc) output += '\n\n';
-      if(incBrief&&c.notes) output += `> **Brief:** ${c.notes}\n\n`;
-      output += (c.body||'*No content written yet.*') + '\n\n---\n\n';
+    exportItems.forEach(item=>{
+      if(item.type==='chapter') {
+        const c=item.data;
+        output += `## Chapter ${c.number}: ${c.title}\n\n`;
+        if(incPov&&c.pov) output += `*${c.pov}'s POV*`;
+        if(incWc) output += ` · *${(c.word_count||0).toLocaleString()} words*`;
+        if(incPov||incWc) output += '\n\n';
+        if(incBrief&&c.notes) output += `> **Brief:** ${c.notes}\n\n`;
+        output += (c.body||'*No content.*') + '\n\n---\n\n';
+      } else {
+        const e=item.data;
+        output += `*${(e.content||'').split('\n').join('*\n\n*')}*\n\n---\n\n`;
+      }
     });
 
     downloadFile(title.replace(/\s+/g,'_')+'.md', output, 'text/markdown');
 
   } else {
     // HTML
-    const chapHtml = selected.map(c=>`
-      <div class="chapter" style="margin-bottom:60px;page-break-after:always">
-        <div style="text-align:center;margin-bottom:36px">
-          <div style="font-size:12px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
-          <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px">${escHtml(c.title)}</h2>
-          ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
-          ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
-        </div>
-        ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic">${escHtml(c.notes)}</div>`:''}
-        <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
-          ${(c.body||'<em>No content written yet.</em>').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
-        </div>
-        <div style="text-align:center;margin-top:40px;color:#ccc">* * *</div>
-      </div>`).join('');
+    const chapHtml = exportItems.map(item=>{
+      if(item.type==='chapter') {
+        const c=item.data;
+        return `<div class="chapter" style="margin-bottom:60px;page-break-after:always">
+          <div style="text-align:center;margin-bottom:36px">
+            <div style="font-size:12px;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div>
+            <h2 style="font-size:22px;font-weight:400;color:#222;margin:0 0 6px">${escHtml(c.title)}</h2>
+            ${incPov&&c.pov?`<div style="font-size:12px;color:#888;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}
+            ${incWc?`<div style="font-size:11px;color:#aaa;margin-top:4px">${(c.word_count||0).toLocaleString()} words</div>`:''}
+          </div>
+          ${incBrief&&c.notes?`<div style="background:#f9f9f9;border-left:3px solid #ddd;padding:12px 16px;margin-bottom:24px;font-size:12px;color:#777;font-style:italic">${escHtml(c.notes)}</div>`:''}
+          <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333">
+            ${(c.body||'').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+          </div>
+          <div style="text-align:center;margin-top:40px;color:#ccc">* * *</div>
+        </div>`;
+      } else {
+        const e=item.data;
+        return `<div style="margin-bottom:60px;page-break-after:always">
+          <div style="text-align:center;margin-bottom:36px;font-size:22px;color:#ccc;font-family:Georgia,serif">—</div>
+          <div style="font-size:16px;line-height:1.85;font-family:Georgia,serif;color:#333;font-style:italic">
+            ${(e.content||'').split('\n').filter(p=>p.trim()).map(p=>`<p style="margin:0 0 1.2em;text-indent:2em">${escHtml(p)}</p>`).join('')}
+          </div>
+          <div style="text-align:center;margin-top:40px;color:#ccc;font-family:Georgia,serif">—</div>
+        </div>`;
+      }
+    }).join('');
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
     <style>body{max-width:680px;margin:60px auto;font-family:Georgia,serif;color:#333}
@@ -3571,7 +3944,10 @@ function runExport() {
   }
 
   closeModal('modal-export');
-  toast(`Exported ${selected.length} chapters — ${totalWc.toLocaleString()} words`);
+  const toastParts=[];
+  if(selectedChaps.length) toastParts.push(`${selectedChaps.length} chapter${selectedChaps.length!==1?'s':''}`);
+  if(selectedEntries.length) toastParts.push(`${selectedEntries.length} entr${selectedEntries.length!==1?'ies':'y'}`);
+  toast(`Exported ${toastParts.join(' + ')} — ${totalWc.toLocaleString()} words`);
 }
 
 function downloadFile(filename, content, mimeType) {
@@ -3859,10 +4235,269 @@ function loadSidebarState() {
   } catch(e) {}
 }
 
+// ─── BETA READERS ─────────────────────────────────────────
+
+async function loadBetaFeedback(){const d=await sb('beta_feedback?order=created_at.desc');if(d)betaFeedback=d;}
+
+function copyBetaLink(){const url=window.location.origin+window.location.pathname+'?reader=true';navigator.clipboard.writeText(url).then(()=>toast('Reader link copied! Share it with beta readers.')).catch(()=>toast('Link: '+url));}
+
+function renderBetaTab(){
+  const readers=[...new Set(betaFeedback.map(f=>f.reader_name))];
+  const readerSel=document.getElementById('beta-filter-reader');
+  const curReader=readerSel.value;
+  readerSel.innerHTML='<option value="">All Readers</option>'+readers.map(r=>`<option value="${escHtml(r)}"${r===curReader?' selected':''}>${escHtml(r)}</option>`).join('');
+  const chapSel=document.getElementById('beta-filter-chapter');
+  const curChap=chapSel.value;
+  const chapNums=[...new Set(betaFeedback.map(f=>f.chapter_number).filter(Boolean))].sort((a,b)=>a-b);
+  chapSel.innerHTML='<option value="">All Chapters</option>'+chapNums.map(n=>`<option value="${n}"${String(n)===curChap?' selected':''}>Chapter ${n}</option>`).join('');
+  document.getElementById('beta-stat-readers').textContent=readers.length||'—';
+  document.getElementById('beta-stat-responses').textContent=betaFeedback.length||'—';
+  const rated=betaFeedback.filter(f=>f.rating);
+  const avg=rated.length?rated.reduce((s,f)=>s+f.rating,0)/rated.length:0;
+  document.getElementById('beta-stat-avg').textContent=avg?avg.toFixed(1)+' ★':'—';
+  renderBetaFeedback();
+}
+
+function renderBetaFeedback(){
+  const el=document.getElementById('beta-feedback-list');
+  const rf=document.getElementById('beta-filter-reader').value;
+  const cf=document.getElementById('beta-filter-chapter').value;
+  let filtered=betaFeedback;
+  if(rf)filtered=filtered.filter(f=>f.reader_name===rf);
+  if(cf)filtered=filtered.filter(f=>String(f.chapter_number)===cf);
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-users-cog"></i><p>No feedback yet — share the reader link to get started.</p></div>';return;}
+  // Group by chapter_number
+  const grouped={};
+  filtered.forEach(f=>{const k=f.chapter_number||'entry';if(!grouped[k])grouped[k]=[];grouped[k].push(f);});
+  el.innerHTML=Object.keys(grouped).sort((a,b)=>a-b).map(k=>{
+    const items=grouped[k];
+    const chapLabel=k==='entry'?'Anonymous Entry':`Chapter ${k}`;
+    const avgR=items.filter(f=>f.rating).length?items.filter(f=>f.rating).reduce((s,f)=>s+f.rating,0)/items.filter(f=>f.rating).length:0;
+    return`<div class="beta-chapter-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--text);flex:1">${chapLabel}</div>
+        ${avgR?`<span style="font-size:12px;color:var(--amber)">${'★'.repeat(Math.round(avgR))}${'☆'.repeat(5-Math.round(avgR))} <span style="color:var(--text3)">${avgR.toFixed(1)}</span></span>`:''}
+        <span style="font-size:11px;color:var(--text3)">${items.length} response${items.length!==1?'s':''}</span>
+      </div>
+      ${items.map(f=>`<div class="feedback-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="feedback-reader-badge">${escHtml(f.reader_name)}</span>
+          ${f.rating?`<span style="color:var(--amber);font-size:13px">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</span>`:''}
+          <span style="font-size:11px;color:var(--text3);margin-left:auto">${timeAgo(f.created_at)}</span>
+        </div>
+        ${f.emotional_response?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Emotional response</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.emotional_response)}</div></div>`:''}
+        ${f.craft_note?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Craft note</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.craft_note)}</div></div>`:''}
+        ${f.notes?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Notes</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.notes)}</div></div>`:''}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── Beta Reader Mode (reader view) ──
+function initBetaReaderMode(){
+  const name=localStorage.getItem('omwty_display_name');
+  if(!name){
+    const n=prompt("Welcome! What's your name?","Reader");
+    if(!n){closeBetaReader();return;}
+    localStorage.setItem('omwty_display_name',n.trim());
+  }
+  document.getElementById('beta-reader-name').textContent=localStorage.getItem('omwty_display_name')||'Reader';
+  betaItems=[
+    ...chapters.filter(c=>c.body&&c.body.trim()).map(c=>({type:'chapter',sort:c.number,data:c})),
+    ...anonEntries.filter(e=>e.content&&e.content.trim()).map(e=>({type:'anon',sort:e.after_chapter+0.5,data:e}))
+  ].sort((a,b)=>a.sort-b.sort);
+  betaIndex=0;betaRating=0;betaEditId=null;
+  document.getElementById('beta-reader-overlay').style.display='flex';
+  renderBetaItem();
+}
+
+function closeBetaReader(){document.getElementById('beta-reader-overlay').style.display='none';}
+
+function renderBetaItem(){
+  const item=betaItems[betaIndex];if(!item)return;
+  document.getElementById('beta-prev').disabled=betaIndex===0;
+  document.getElementById('beta-next').disabled=betaIndex===betaItems.length-1;
+  document.getElementById('beta-indicator').textContent=`${betaIndex+1} of ${betaItems.length}`;
+  const area=document.getElementById('beta-content-area');
+  if(item.type==='chapter'){
+    const c=item.data;
+    const paras=c.body.split('\n').filter(p=>p.trim());
+    document.getElementById('beta-form-title').textContent=`Your feedback on Chapter ${c.number}`;
+    area.innerHTML=`<div style="text-align:center;margin-bottom:40px;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div><div style="font-size:24px;color:#e0e0e0;margin-bottom:6px">${escHtml(c.title)}</div>${c.pov?`<div style="font-size:12px;color:#555;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}</div>${paras.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}<div style="text-align:center;margin-top:40px;color:#333;font-size:18px">* * *</div>`;
+  } else {
+    const e=item.data;
+    const paras=e.content.split('\n').filter(p=>p.trim());
+    document.getElementById('beta-form-title').textContent='Your feedback on this passage';
+    area.innerHTML=`<div style="text-align:center;margin-bottom:36px;font-size:20px;color:#333">—</div><div style="font-style:italic">${paras.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}</div><div style="text-align:center;margin-top:36px;color:#333;font-size:18px">—</div>`;
+  }
+  document.getElementById('beta-reader-body').scrollTop=0;
+  // Check if already submitted
+  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
+  const contentId=item.type==='chapter'?item.data.id:item.data.id;
+  const existing=betaFeedback.find(f=>f.content_id===contentId&&f.reader_name===readerName);
+  if(existing){betaEditId=existing.id;populateBetaForm(existing);document.getElementById('beta-already-submitted').style.display='block';}
+  else{betaEditId=null;clearBetaForm();document.getElementById('beta-already-submitted').style.display='none';}
+}
+
+function populateBetaForm(f){setBetaRating(f.rating||0);document.getElementById('beta-emotional').value=f.emotional_response||'';document.getElementById('beta-craft').value=f.craft_note||'';document.getElementById('beta-notes').value=f.notes||'';}
+function clearBetaForm(){setBetaRating(0);['beta-emotional','beta-craft','beta-notes'].forEach(id=>document.getElementById(id).value='');}
+function showBetaEditForm(){document.getElementById('beta-already-submitted').style.display='none';}
+function setBetaRating(val){betaRating=val;document.querySelectorAll('.star-btn').forEach(b=>{b.classList.toggle('active',parseInt(b.dataset.val)<=val);});}
+function betaPrev(){if(betaIndex>0){betaIndex--;betaRating=0;betaEditId=null;renderBetaItem();}}
+function betaNext(){if(betaIndex<betaItems.length-1){betaIndex++;betaRating=0;betaEditId=null;renderBetaItem();}}
+
+async function submitBetaFeedback(){
+  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
+  const item=betaItems[betaIndex];if(!item)return;
+  const payload={content_type:item.type==='chapter'?'chapter':'entry',content_id:item.data.id,chapter_number:item.type==='chapter'?item.data.number:item.data.after_chapter,content_title:item.type==='chapter'?item.data.title:(item.data.title||`Entry after Ch. ${item.data.after_chapter}`),reader_name:readerName,rating:betaRating||null,emotional_response:document.getElementById('beta-emotional').value.trim(),craft_note:document.getElementById('beta-craft').value.trim(),notes:document.getElementById('beta-notes').value.trim()};
+  if(betaEditId){await sb(`beta_feedback?id=eq.${betaEditId}`,{method:'PATCH',body:JSON.stringify(payload)});toast('Feedback updated!');}
+  else{await sb('beta_feedback',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});toast('Feedback submitted — thank you!');}
+  await loadBetaFeedback();
+  // Auto-advance
+  if(betaIndex<betaItems.length-1){setTimeout(()=>betaNext(),800);}
+  else toast('You've reached the end! Thank you for reading.');
+}
+
+// ─── SUBMISSION ────────────────────────────────────────────
+
+async function loadSubmissionData(){
+  const [docs,agents,arcs]=await Promise.all([
+    sb('submission_docs?order=type'),
+    sb('agent_queries?order=query_date.desc'),
+    sb('arc_readers?order=sent_date.desc')
+  ]);
+  if(docs)submissionDocs=docs;
+  if(agents)agentQueries=agents;
+  if(arcs)arcReaders=arcs;
+  // Load comp titles from local storage (lightweight, no table needed)
+  try{compTitles=JSON.parse(localStorage.getItem('omwty_comps')||'[]');}catch(e){compTitles=[];}
+}
+
+function setSubMode(mode){
+  subMode=mode;
+  document.getElementById('sub-mode-trad').classList.toggle('active',mode==='traditional');
+  document.getElementById('sub-mode-indie').classList.toggle('active',mode==='indie');
+  document.getElementById('sub-traditional').style.display=mode==='traditional'?'block':'none';
+  document.getElementById('sub-indie').style.display=mode==='indie'?'block':'none';
+}
+
+function renderSubmissionTab(){
+  // Populate doc textareas from saved data
+  const docTypes={traditional:['logline','synopsis_short','synopsis_full','query_letter'],indie:['logline','back_cover','arc_pitch']};
+  ['traditional','indie'].forEach(mode=>{
+    docTypes[mode].forEach(type=>{
+      const saved=submissionDocs.find(d=>d.type===type&&d.mode===mode);
+      const id='doc-'+type.replace('_','-')+(mode==='indie'&&type==='logline'?'-indie':'');
+      const el=document.getElementById(id);
+      if(el&&saved&&!el.dataset.userEditing)el.value=saved.content||'';
+    });
+  });
+  renderComps();renderAgents();renderArcReaders();
+}
+
+async function saveSubDoc(type,content,mode){
+  clearTimeout(subSaveTimers[type+mode]);
+  subSaveTimers[type+mode]=setTimeout(async()=>{
+    const existing=submissionDocs.find(d=>d.type===type&&d.mode===mode);
+    if(existing){await sb(`submission_docs?id=eq.${existing.id}`,{method:'PATCH',body:JSON.stringify({content,updated_at:new Date().toISOString()})});}
+    else{const r=await sb('submission_docs',{method:'POST',body:JSON.stringify({type,mode,content}),headers:{...h,'Prefer':'return=representation'}});if(r&&r[0])submissionDocs.push(r[0]);}
+  },1200);
+}
+
+// AI Generation
+async function generateSubmissionDocs(){
+  const btn=document.getElementById('sub-generate-btn');
+  btn.disabled=true;
+  document.getElementById('sub-loading').style.display='block';
+  const msgs=['Pulling story materials…','Building your logline…','Drafting synopsis…','Writing query letter…','Almost done…'];
+  let mi=0;const mt=setInterval(()=>{mi=(mi+1)%msgs.length;const el=document.getElementById('sub-loading-msg');if(el)el.textContent=msgs[mi];},3000);
+  // Compile all materials
+  const storySpine=submissionDocs.find(d=>d.type==='story-spine')||null;
+  const charProfiles=chapters.slice(0,5).map(c=>`Chapter ${c.number} "${c.title}": ${c.notes||''}`.trim()).filter(Boolean).join('\n');
+  const chapBriefs=[...chapters].sort((a,b)=>a.number-b.number).slice(0,10).map(c=>`Ch.${c.number} ${c.title}: ${(c.notes||'').slice(0,120)}`).filter(Boolean).join('\n');
+  const mode=subMode;
+  const outputSpec=mode==='traditional'
+    ?`[LOGLINE]\n1 sentence\n\n[SYNOPSIS_SHORT]\n2-3 paragraphs for query letter inclusion\n\n[SYNOPSIS_FULL]\n1-2 page complete synopsis revealing all plot points including ending\n\n[QUERY_LETTER]\nComplete query letter with hook, synopsis, bio placeholder, and comp note`
+    :`[LOGLINE]\n1 sentence\n\n[BACK_COVER]\nCompelling reader-facing back cover blurb (no spoilers)\n\n[ARC_PITCH]\nPitch email to send to advance readers`;
+  const prompt=`You are a publishing consultant helping prepare submission materials for a literary fiction novel.
+
+Novel: "On My Way To You" — dual POV literary fiction, 36 chapters, 5 parts
+
+Chapter structure and briefs:
+${chapBriefs||'[No briefs available yet]'}
+
+Generate the following materials using the [SECTION] delimiter format. Write each section's content directly after the header — plain text only, no markdown, no explanation. Keep each section tight and professional.
+
+${outputSpec}
+
+Write with warmth, specificity, and the confidence of a well-crafted literary novel. The query letter bio section should include a [AUTHOR BIO] placeholder.`;
+  try{
+    const response=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:3000,messages:[{role:'user',content:prompt}]})});
+    clearInterval(mt);
+    if(!response.ok)throw new Error('API error '+response.status);
+    const data=await response.json();
+    if(data.error)throw new Error(data.error);
+    const raw=data.content[0].text.trim();
+    // Parse sections
+    const sections={};
+    raw.split(/(?=\[(?:LOGLINE|SYNOPSIS_SHORT|SYNOPSIS_FULL|QUERY_LETTER|BACK_COVER|ARC_PITCH)\])/i).forEach(block=>{
+      const m=block.match(/^\[([A-Z_]+)\]/i);if(!m)return;
+      sections[m[1].toUpperCase()]=block.slice(m[0].length).trim();
+    });
+    // Populate and save
+    const docMap=mode==='traditional'?{LOGLINE:'logline',SYNOPSIS_SHORT:'synopsis_short',SYNOPSIS_FULL:'synopsis_full',QUERY_LETTER:'query_letter'}:{LOGLINE:'logline',BACK_COVER:'back_cover',ARC_PITCH:'arc_pitch'};
+    for(const[key,type] of Object.entries(docMap)){
+      if(sections[key]){
+        const id='doc-'+type.replace('_','-')+(mode==='indie'&&type==='logline'?'-indie':'');
+        const el=document.getElementById(id);if(el)el.value=sections[key];
+        await saveSubDoc(type,sections[key],mode);
+      }
+    }
+    document.getElementById('sub-loading').style.display='none';
+    btn.disabled=false;
+    toast('Materials generated! Review and edit them to make them yours.');
+  }catch(err){
+    clearInterval(mt);
+    document.getElementById('sub-loading').style.display='none';
+    btn.disabled=false;
+    console.error('Sub gen error:',err);
+    if(err.message.includes('404')||err.message.includes('Failed to fetch'))toast('AI not configured — add the edge function and ANTHROPIC_API_KEY to this Netlify site');
+    else toast('Generation failed: '+err.message.slice(0,60));
+  }
+}
+
+// Comp Titles
+function renderComps(){const el=document.getElementById('comps-list');if(!compTitles.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);font-style:italic">No comp titles yet</div>';return;}el.innerHTML=compTitles.map((c,i)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="openEditComp(${i})"><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(c.title)} <span style="font-weight:400;color:var(--text3)">by ${escHtml(c.author)}</span>${c.year?` <span style="color:var(--text3)">(${c.year})</span>`:''}</div>${c.reason?`<div style="font-size:12px;color:var(--text2);margin-top:3px">${escHtml(c.reason)}</div>`:''}</div></div>`).join('');}
+function openAddComp(){document.getElementById('modal-comp').classList.add('open');['comp-title','comp-author','comp-reason'].forEach(id=>document.getElementById(id).value='');document.getElementById('comp-year').value='';document.getElementById('comp-id').value='';document.getElementById('comp-delete').style.display='none';}
+function openEditComp(i){const c=compTitles[i];document.getElementById('comp-title').value=c.title||'';document.getElementById('comp-author').value=c.author||'';document.getElementById('comp-year').value=c.year||'';document.getElementById('comp-reason').value=c.reason||'';document.getElementById('comp-id').value=i;document.getElementById('comp-delete').style.display='inline-flex';openModal('modal-comp');}
+function saveComp(){const t=document.getElementById('comp-title').value.trim();if(!t)return;const c={title:t,author:document.getElementById('comp-author').value.trim(),year:document.getElementById('comp-year').value.trim(),reason:document.getElementById('comp-reason').value.trim()};const id=document.getElementById('comp-id').value;if(id!=='')compTitles[parseInt(id)]=c;else compTitles.push(c);localStorage.setItem('omwty_comps',JSON.stringify(compTitles));closeModal('modal-comp');renderComps();toast('Comp saved');}
+function deleteComp(){const id=document.getElementById('comp-id').value;if(id===''||!confirm('Delete this comp?'))return;compTitles.splice(parseInt(id),1);localStorage.setItem('omwty_comps',JSON.stringify(compTitles));closeModal('modal-comp');renderComps();toast('Deleted');}
+
+// Agent Queries
+const agentStatusColors={pending:'var(--blue)',partial:'var(--amber)',full:'var(--green)',offer:'#7c3aed',pass:'var(--text3)',closed:'var(--text3)'};
+const agentStatusLabels={pending:'Pending',partial:'Partial Request',full:'Full Request',offer:'Offer!',pass:'Pass',closed:'Closed'};
+function renderAgents(){const el=document.getElementById('agents-list');if(!agentQueries.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);font-style:italic">No queries logged yet</div>';return;}el.innerHTML=agentQueries.map(a=>{const col=agentStatusColors[a.status]||'var(--text3)';const lbl=agentStatusLabels[a.status]||a.status;const dateStr=a.query_date?new Date(a.query_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';return`<div class="agent-row" onclick="openEditAgent('${a.id}')"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(a.agent_name)}</div><div style="font-size:11px;color:var(--text3)">${escHtml(a.agency||'')}${dateStr?' · '+dateStr:''}</div>${a.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.notes.slice(0,60))}</div>`:''}</div><span class="status-pill" style="background:${col}18;color:${col}">${lbl}</span></div>`;}).join('');}
+function openAddAgent(){document.getElementById('modal-agent-title').textContent='Log Agent Query';['agent-name','agent-agency','agent-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('agent-date').value=new Date().toISOString().slice(0,10);document.getElementById('agent-response-date').value='';document.getElementById('agent-status').value='pending';document.getElementById('agent-id').value='';document.getElementById('agent-delete').style.display='none';openModal('modal-agent');}
+function openEditAgent(id){const a=agentQueries.find(x=>x.id===id);if(!a)return;document.getElementById('modal-agent-title').textContent='Edit Query';document.getElementById('agent-name').value=a.agent_name||'';document.getElementById('agent-agency').value=a.agency||'';document.getElementById('agent-date').value=a.query_date||'';document.getElementById('agent-response-date').value=a.response_date||'';document.getElementById('agent-status').value=a.status||'pending';document.getElementById('agent-notes').value=a.notes||'';document.getElementById('agent-id').value=id;document.getElementById('agent-delete').style.display='inline-flex';openModal('modal-agent');}
+async function saveAgent(){const p={agent_name:document.getElementById('agent-name').value.trim()||'Unknown',agency:document.getElementById('agent-agency').value.trim(),query_date:document.getElementById('agent-date').value||null,response_date:document.getElementById('agent-response-date').value||null,status:document.getElementById('agent-status').value,notes:document.getElementById('agent-notes').value.trim(),updated_at:new Date().toISOString()};const id=document.getElementById('agent-id').value;if(id){await sb(`agent_queries?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(p)});toast('Updated');}else{await sb('agent_queries',{method:'POST',body:JSON.stringify(p),headers:{...h,'Prefer':'return=representation'}});toast('Query logged');}closeModal('modal-agent');await loadSubmissionData();renderAgents();}
+async function deleteAgent(){const id=document.getElementById('agent-id').value;if(!id||!confirm('Delete this query?'))return;await sb(`agent_queries?id=eq.${id}`,{method:'DELETE'});closeModal('modal-agent');await loadSubmissionData();renderAgents();toast('Deleted');}
+
+// ARC Readers
+function renderArcReaders(){const el=document.getElementById('arc-list');if(!arcReaders.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);font-style:italic">No ARC readers yet</div>';return;}el.innerHTML=arcReaders.map(r=>{const sent=r.sent_date?new Date(r.sent_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';return`<div class="agent-row" onclick="openEditArc('${r.id}')"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(r.reader_name)}</div><div style="font-size:11px;color:var(--text3)">${escHtml(r.format||'')}${sent?' · Sent '+sent:''} ${r.platform?'· '+escHtml(r.platform):''}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><span class="status-pill" style="background:${r.feedback_received?'rgba(42,128,80,.12)':'var(--bg3)'};color:${r.feedback_received?'var(--green)':'var(--text3)'}">Feedback</span><span class="status-pill" style="background:${r.posted_review?'rgba(42,128,80,.12)':'var(--bg3)'};color:${r.posted_review?'var(--green)':'var(--text3)'}">Posted</span></div></div>`;}).join('');}
+function openAddArc(){document.getElementById('modal-arc-title').textContent='Add ARC Reader';['arc-name','arc-contact','arc-platform','arc-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('arc-date').value='';document.getElementById('arc-format').value='ebook';document.getElementById('arc-feedback').checked=false;document.getElementById('arc-posted').checked=false;document.getElementById('arc-id').value='';document.getElementById('arc-delete').style.display='none';openModal('modal-arc');}
+function openEditArc(id){const r=arcReaders.find(x=>x.id===id);if(!r)return;document.getElementById('modal-arc-title').textContent='Edit ARC Reader';document.getElementById('arc-name').value=r.reader_name||'';document.getElementById('arc-contact').value=r.contact||'';document.getElementById('arc-date').value=r.sent_date||'';document.getElementById('arc-format').value=r.format||'ebook';document.getElementById('arc-platform').value=r.platform||'';document.getElementById('arc-feedback').checked=!!r.feedback_received;document.getElementById('arc-posted').checked=!!r.posted_review;document.getElementById('arc-notes').value=r.notes||'';document.getElementById('arc-id').value=id;document.getElementById('arc-delete').style.display='inline-flex';openModal('modal-arc');}
+async function saveArc(){const p={reader_name:document.getElementById('arc-name').value.trim()||'Reader',contact:document.getElementById('arc-contact').value.trim(),sent_date:document.getElementById('arc-date').value||null,format:document.getElementById('arc-format').value,platform:document.getElementById('arc-platform').value.trim(),feedback_received:document.getElementById('arc-feedback').checked,posted_review:document.getElementById('arc-posted').checked,notes:document.getElementById('arc-notes').value.trim()};const id=document.getElementById('arc-id').value;if(id){await sb(`arc_readers?id=eq.${id}`,{method:'PATCH',body:JSON.stringify(p)});toast('Updated');}else{await sb('arc_readers',{method:'POST',body:JSON.stringify(p),headers:{...h,'Prefer':'return=representation'}});toast('ARC reader added');}closeModal('modal-arc');await loadSubmissionData();renderArcReaders();}
+async function deleteArc(){const id=document.getElementById('arc-id').value;if(!id||!confirm('Delete?'))return;await sb(`arc_readers?id=eq.${id}`,{method:'DELETE'});closeModal('modal-arc');await loadSubmissionData();renderArcReaders();toast('Deleted');}
+
 // ─── BOOT ─────────────────────────────────────────────────
 loadThemePrefs();
 loadSidebarState();
-init();
+// Check for beta reader mode (?reader=true)
+if(new URLSearchParams(window.location.search).get('reader')==='true'){
+  init().then(()=>initBetaReaderMode());
+} else {
+  init();
+}
 </script>
 </body>
 </html>
