@@ -2,7 +2,7 @@ export default async (request) => {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
-  const apiKey = Deno.env.get('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');
+  const apiKey = Deno.env.get('process.env.ANTHROPIC_API_KEY');
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } });
