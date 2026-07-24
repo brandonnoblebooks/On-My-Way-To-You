@@ -206,7 +206,11 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .anon-author-badge{font-size:9px;padding:1px 7px;border-radius:8px;font-weight:600;letter-spacing:.04em}
 .anon-preview{font-size:13px;color:var(--text2);line-height:1.55;font-style:italic;margin-bottom:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .anon-meta{font-size:11px;color:var(--text3)}
-/* ── BETA READER ── */
+/* ── READER MODE LOCKOUT ── */
+body.reader-mode #app,
+body.reader-mode #bookshelf {
+  display: none !important;
+}
 .beta-chapter-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;margin-bottom:8px}
 .star-btn{background:none;border:none;cursor:pointer;font-size:22px;padding:2px 3px;line-height:1;transition:transform .1s;color:#ccc}
 .star-btn:hover,.star-btn.active{color:#f59e0b;transform:scale(1.15)}
@@ -4295,13 +4299,17 @@ function renderBetaFeedback(){
 
 // ── Beta Reader Mode (reader view) ──
 function initBetaReaderMode(){
+  document.body.classList.add('reader-mode');
   const name=localStorage.getItem('omwty_display_name');
   if(!name){
     const n=prompt("Welcome! What's your name?","Reader");
-    if(!n){closeBetaReader();return;}
+    if(!n){ document.body.classList.remove('reader-mode'); return; }
     localStorage.setItem('omwty_display_name',n.trim());
   }
   document.getElementById('beta-reader-name').textContent=localStorage.getItem('omwty_display_name')||'Reader';
+  // Hide the close button in reader mode — no escape to the CRM
+  const closeBtn=document.querySelector('#beta-reader-overlay .btn-sm:first-child');
+  if(closeBtn) closeBtn.style.display='none';
   betaItems=[
     ...chapters.filter(c=>c.body&&c.body.trim()).map(c=>({type:'chapter',sort:c.number,data:c})),
     ...anonEntries.filter(e=>e.content&&e.content.trim()).map(e=>({type:'anon',sort:e.after_chapter+0.5,data:e}))
@@ -4355,7 +4363,7 @@ async function submitBetaFeedback(){
   await loadBetaFeedback();
   // Auto-advance
   if(betaIndex<betaItems.length-1){setTimeout(()=>betaNext(),800);}
-  else toast('Youve reached the end! Thank you for reading.');
+  else toast("You've reached the end! Thank you for reading.");
 }
 
 // ─── SUBMISSION ────────────────────────────────────────────
