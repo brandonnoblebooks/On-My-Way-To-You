@@ -660,24 +660,44 @@ select.form-input option{background:var(--bg2)}
 
       <!-- BETA READERS TAB -->
       <div id="tab-beta" class="tab">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px">Beta Reader Program</div>
-            <div style="font-size:13px;color:var(--text2)">Share the reader link with beta readers. Their feedback appears here organized by chapter.</div>
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="bv-overview" onclick="setBetaView('overview')">Overview</button>
+            <button class="mode-btn" id="bv-chapters" onclick="setBetaView('chapters')">By Chapter</button>
+            <button class="mode-btn" id="bv-annotations" onclick="setBetaView('annotations')">Annotations</button>
           </div>
-          <button class="btn btn-primary" onclick="copyBetaLink()"><i class="fas fa-link"></i> Copy Reader Link</button>
+          <button class="btn btn-primary btn-sm" onclick="copyBetaLink()"><i class="fas fa-link"></i> Copy Reader Link</button>
         </div>
-        <!-- Stats -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--accent)" id="beta-stat-readers">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Readers</div></div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--green)" id="beta-stat-responses">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Responses</div></div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center"><div style="font-size:22px;font-weight:600;color:var(--amber)" id="beta-stat-avg">—</div><div style="font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Avg Rating</div></div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--accent)" id="beta-stat-readers">—</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Readers</div></div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)" id="beta-stat-responses">—</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Responses</div></div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)" id="beta-stat-avg">—</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Avg Rating</div></div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:#9b6b9b" id="beta-stat-annotations">—</div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Annotations</div></div>
         </div>
-        <!-- Filter -->
-        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-          <select class="form-input" id="beta-filter-reader" onchange="renderBetaFeedback()" style="flex:1;max-width:200px"><option value="">All Readers</option></select>
-          <select class="form-input" id="beta-filter-chapter" onchange="renderBetaFeedback()" style="flex:1;max-width:200px"><option value="">All Chapters</option></select>
+
+        <!-- Controls bar -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+          <select class="form-input" id="beta-filter-reader" onchange="renderBetaView()" style="flex:1;min-width:120px;max-width:180px;font-size:12px;padding:6px 10px"><option value="">All Readers</option></select>
+          <select class="form-input" id="beta-sort" onchange="renderBetaView()" style="flex:1;min-width:130px;max-width:180px;font-size:12px;padding:6px 10px">
+            <option value="chapter">Sort: Chapter order</option>
+            <option value="rating-hi">Sort: Highest rated</option>
+            <option value="rating-lo">Sort: Lowest rated</option>
+            <option value="newest">Sort: Newest first</option>
+            <option value="reader">Sort: By reader</option>
+          </select>
+          <select class="form-input" id="beta-reaction-filter" onchange="renderBetaView()" style="flex:1;min-width:120px;max-width:160px;font-size:12px;padding:6px 10px;display:none">
+            <option value="">All reactions</option>
+            <option value="love">❤️ Love this</option>
+            <option value="hmm">🤔 Hmm...</option>
+            <option value="confused">❓ Confused</option>
+            <option value="flag">🚩 Flagged</option>
+            <option value="general">💬 General notes</option>
+          </select>
         </div>
+
         <div id="beta-feedback-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
 
@@ -4307,22 +4327,158 @@ async function loadBetaFeedback(){
 
 function copyBetaLink(){const url=window.location.origin+window.location.pathname+'?reader=true';navigator.clipboard.writeText(url).then(()=>toast('Reader link copied! Share it with beta readers.')).catch(()=>toast('Link: '+url));}
 
+let betaView = 'overview';
+
+function setBetaView(v) {
+  betaView = v;
+  ['overview','chapters','annotations'].forEach(x => {
+    const btn = document.getElementById('bv-'+x);
+    if(btn) btn.classList.toggle('active', x===v);
+  });
+  // Show reaction filter only on annotations view
+  const rf = document.getElementById('beta-reaction-filter');
+  if(rf) rf.style.display = v==='annotations' ? 'block' : 'none';
+  renderBetaView();
+}
+
+function renderBetaView() {
+  if(betaView==='overview') renderBetaOverview();
+  else if(betaView==='chapters') renderBetaByChapter();
+  else renderBetaAnnotationsView();
+}
+
 function renderBetaTab(){
   const readers=[...new Set(betaFeedback.map(f=>f.reader_name))];
   const readerSel=document.getElementById('beta-filter-reader');
-  const curReader=readerSel.value;
-  readerSel.innerHTML='<option value="">All Readers</option>'+readers.map(r=>`<option value="${escHtml(r)}"${r===curReader?' selected':''}>${escHtml(r)}</option>`).join('');
-  const chapSel=document.getElementById('beta-filter-chapter');
-  const curChap=chapSel.value;
-  const chapNums=[...new Set(betaFeedback.map(f=>f.chapter_number).filter(Boolean))].sort((a,b)=>a-b);
-  chapSel.innerHTML='<option value="">All Chapters</option>'+chapNums.map(n=>`<option value="${n}"${String(n)===curChap?' selected':''}>Chapter ${n}</option>`).join('');
-  document.getElementById('beta-stat-readers').textContent=readers.length||'—';
-  document.getElementById('beta-stat-responses').textContent=betaFeedback.length||'—';
+  const curReader=readerSel?readerSel.value:'';
+  if(readerSel) readerSel.innerHTML='<option value="">All Readers</option>'+readers.map(r=>`<option value="${escHtml(r)}"${r===curReader?' selected':''}>${escHtml(r)}</option>`).join('');
   const rated=betaFeedback.filter(f=>f.rating);
   const avg=rated.length?rated.reduce((s,f)=>s+f.rating,0)/rated.length:0;
+  document.getElementById('beta-stat-readers').textContent=readers.length||'—';
+  document.getElementById('beta-stat-responses').textContent=betaFeedback.length||'—';
   document.getElementById('beta-stat-avg').textContent=avg?avg.toFixed(1)+' ★':'—';
-  renderBetaFeedback();
+  document.getElementById('beta-stat-annotations').textContent=betaAnnotations.length||'—';
+  renderBetaView();
 }
+
+// ── Overview: one card per reader ──
+function renderBetaOverview() {
+  const el=document.getElementById('beta-feedback-list');
+  const rf=document.getElementById('beta-filter-reader').value;
+  const readers=[...new Set([...betaFeedback,...betaAnnotations].map(x=>x.reader_name))].filter(r=>!rf||r===rf);
+  if(!readers.length){el.innerHTML='<div class="empty-state"><i class="fas fa-users-cog"></i><p>No feedback yet — share the reader link to get started.</p></div>';return;}
+  el.innerHTML=readers.map(r=>{
+    const fb=betaFeedback.filter(f=>f.reader_name===r);
+    const ann=betaAnnotations.filter(a=>a.reader_name===r);
+    const rated=fb.filter(f=>f.rating);
+    const avg=rated.length?rated.reduce((s,f)=>s+f.rating,0)/rated.length:0;
+    const momentum=fb.filter(f=>f.momentum).length;
+    const reread=fb.filter(f=>f.reread_flag).length;
+    const reactionCounts={love:0,hmm:0,confused:0,flag:0};
+    ann.forEach(a=>{if(reactionCounts[a.reaction]!==undefined)reactionCounts[a.reaction]++;});
+    const lastActive=[...fb,...ann].map(x=>x.created_at).sort().pop();
+    return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-glow);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0">${r.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(r)}</div>
+          <div style="font-size:11px;color:var(--text3)">Last active ${lastActive?timeAgo(lastActive):'—'}</div>
+        </div>
+        ${avg?`<div style="text-align:right"><div style="font-size:15px;font-weight:600;color:var(--amber)">${avg.toFixed(1)} ★</div><div style="font-size:10px;color:var(--text3)">avg rating</div></div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;padding:3px 10px;border-radius:10px;background:var(--bg3);color:var(--text2)">${fb.length} chapter${fb.length!==1?'s':''} rated</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:10px;background:var(--bg3);color:var(--text2)">${ann.length} annotation${ann.length!==1?'s':''}</span>
+        ${momentum?`<span style="font-size:12px;padding:3px 10px;border-radius:10px;background:rgba(42,128,80,.1);color:var(--green)">↓ ${momentum}× kept reading</span>`:''}
+        ${reread?`<span style="font-size:12px;padding:3px 10px;border-radius:10px;background:rgba(184,120,0,.1);color:var(--amber)">↩ ${reread}× reread</span>`:''}
+        ${Object.entries(reactionCounts).filter(([,v])=>v>0).map(([k,v])=>{const r2=ANNO[k];return`<span style="font-size:12px;padding:3px 10px;border-radius:10px;background:${r2.color}14;color:${r2.color}">${r2.emoji} ${v}</span>`;}).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── By Chapter: chapters in order with feedback ──
+function renderBetaByChapter() {
+  const el=document.getElementById('beta-feedback-list');
+  const rf=document.getElementById('beta-filter-reader').value;
+  const sort=document.getElementById('beta-sort').value;
+  let fb=betaFeedback.filter(f=>!rf||f.reader_name===rf);
+  if(!fb.length){el.innerHTML='<div class="empty-state"><i class="fas fa-list-ol"></i><p>No chapter feedback yet.</p></div>';return;}
+  // Sort
+  if(sort==='rating-hi') fb=[...fb].sort((a,b)=>(b.rating||0)-(a.rating||0));
+  else if(sort==='rating-lo') fb=[...fb].sort((a,b)=>(a.rating||0)-(b.rating||0));
+  else if(sort==='newest') fb=[...fb].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  else if(sort==='reader') fb=[...fb].sort((a,b)=>a.reader_name.localeCompare(b.reader_name));
+  else fb=[...fb].sort((a,b)=>(a.chapter_number||0)-(b.chapter_number||0));
+
+  const grouped={};
+  fb.forEach(f=>{const k=f.chapter_number||'entry';if(!grouped[k])grouped[k]=[];grouped[k].push(f);});
+  const keys=sort==='chapter'?Object.keys(grouped).sort((a,b)=>a-b):Object.keys(grouped);
+
+  el.innerHTML=keys.map(k=>{
+    const items=grouped[k];
+    const label=k==='entry'?'Anonymous Entry':`Chapter ${k}`;
+    const avgR=items.filter(f=>f.rating).length?items.filter(f=>f.rating).reduce((s,f)=>s+f.rating,0)/items.filter(f=>f.rating).length:0;
+    const chAnn=betaAnnotations.filter(a=>String(a.chapter_number)===String(k)&&(!rf||a.reader_name===rf));
+    return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px">
+      <div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg3)">
+        <div style="font-size:13px;font-weight:600;color:var(--text);flex:1">${label}</div>
+        ${avgR?`<span style="font-size:13px;color:var(--amber)">${avgR.toFixed(1)} ★</span>`:''}
+        <span style="font-size:11px;color:var(--text3)">${items.length} reader${items.length!==1?'s':''}</span>
+        ${chAnn.length?`<span style="font-size:11px;color:#9b6b9b">${chAnn.length} note${chAnn.length!==1?'s':''}</span>`:''}
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+        ${items.map(f=>`<div style="border-left:3px solid ${f.rating?ratingColor(f.rating):'var(--border2)'};padding:8px 12px;background:var(--bg3);border-radius:0 var(--radius-sm) var(--radius-sm) 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(f.reader_name)}</span>
+            ${f.rating?`<span style="color:var(--amber);font-size:12px">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</span>`:'<span style="font-size:11px;color:var(--text3)">no rating</span>'}
+            ${f.momentum?'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(42,128,80,.12);color:var(--green)">↓ kept reading</span>':''}
+            ${f.reread_flag?'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(184,120,0,.1);color:var(--amber)">↩ reread</span>':''}
+            <span style="font-size:10px;color:var(--text3);margin-left:auto">${timeAgo(f.created_at)}</span>
+          </div>
+          ${f.emotional_response?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px"><span style="color:var(--text3)">Feeling: </span>${escHtml(f.emotional_response)}</div>`:''}
+          ${f.craft_note?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px"><span style="color:var(--text3)">Craft: </span>${escHtml(f.craft_note)}</div>`:''}
+          ${f.notes?`<div style="font-size:12px;color:var(--text2)"><span style="color:var(--text3)">Notes: </span>${escHtml(f.notes)}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function ratingColor(r){return r>=4?'var(--green)':r===3?'var(--amber)':'var(--red)';}
+
+// ── Annotations view ──
+function renderBetaAnnotationsView() {
+  const el=document.getElementById('beta-feedback-list');
+  const rf=document.getElementById('beta-filter-reader').value;
+  const rx=document.getElementById('beta-reaction-filter').value;
+  const sort=document.getElementById('beta-sort').value;
+  let ann=betaAnnotations;
+  if(rf) ann=ann.filter(a=>a.reader_name===rf);
+  if(rx==='general') ann=ann.filter(a=>a.anno_source==='general');
+  else if(rx) ann=ann.filter(a=>a.reaction===rx);
+  if(sort==='newest') ann=[...ann].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  else if(sort==='reader') ann=[...ann].sort((a,b)=>a.reader_name.localeCompare(b.reader_name));
+  else ann=[...ann].sort((a,b)=>(a.chapter_number||0)-(b.chapter_number||0));
+  if(!ann.length){el.innerHTML='<div class="empty-state"><i class="fas fa-comment-alt"></i><p>No annotations yet.</p></div>';return;}
+  el.innerHTML=ann.map(a=>{
+    const r=ANNO[a.reaction]||{emoji:'✏️',color:'var(--text3)',label:'Note'};
+    const sourceLabel=a.anno_source==='selection'?'Selected text':a.anno_source==='general'?'General note':'Paragraph';
+    return`<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${r.color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:16px">${r.emoji}</span>
+        <span style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(a.reader_name)}</span>
+        <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:var(--bg3);color:var(--text3)">Ch. ${a.chapter_number||'—'}</span>
+        <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:var(--bg3);color:var(--text3)">${sourceLabel}</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:auto">${timeAgo(a.created_at)}</span>
+      </div>
+      ${a.passage?`<div style="font-size:12px;color:var(--text3);font-style:italic;padding:7px 10px;background:var(--bg3);border-radius:var(--radius-sm);margin-bottom:7px;line-height:1.5">"${escHtml(a.passage.slice(0,150))}${a.passage.length>150?'…':''}"</div>`:''}
+      ${a.note?`<div style="font-size:13px;color:var(--text2);line-height:1.55">${escHtml(a.note)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderBetaFeedback() { renderBetaView(); }
 
 function renderBetaFeedback(){
   const el=document.getElementById('beta-feedback-list');
@@ -4442,7 +4598,13 @@ function renderBetaItem(){
     const e=item.data;
     const paras=e.content.split('\n').filter(p=>p.trim());
     document.getElementById('beta-form-title').textContent='Your feedback on this passage';
-    area.innerHTML=`<div style="text-align:center;margin-bottom:36px;font-size:20px;color:#333">—</div><div style="font-size:13px;color:#555;font-style:italic;margin-bottom:16px;text-align:center">Tap any paragraph to leave a note</div><div style="font-style:italic">${paras.map((p,i)=>makePara(p,i)).join('')}</div><div style="text-align:center;margin-top:36px;color:#333;font-size:18px">—</div>`;
+    area.innerHTML=`<div style="text-align:center;margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div style="font-size:20px;color:#444;margin-bottom:${e.title?'12px':'0'}">—</div>
+      ${e.title?`<div style="font-size:18px;font-weight:400;color:#ccc;font-family:Georgia,serif;font-style:italic">${escHtml(e.title)}</div>`:''}
+    </div>
+    <div style="font-size:13px;color:#555;font-style:italic;margin-bottom:16px;text-align:center">Tap any paragraph to leave a note</div>
+    <div style="font-style:italic">${paras.map((p,i)=>makePara(p,i)).join('')}</div>
+    <div style="text-align:center;margin-top:36px;color:#444;font-size:18px">—</div>`;
   }
   document.getElementById('beta-reader-body').scrollTop=0;
   // Check existing chapter-level feedback
@@ -4478,8 +4640,11 @@ async function submitBetaFeedback(){
   const readerName=localStorage.getItem('omwty_display_name')||'Reader';
   const item=betaItems[betaIndex];if(!item)return;
   const payload={content_type:item.type==='chapter'?'chapter':'entry',content_id:item.data.id,chapter_number:item.type==='chapter'?item.data.number:item.data.after_chapter,content_title:item.type==='chapter'?item.data.title:(item.data.title||`Entry after Ch. ${item.data.after_chapter}`),reader_name:readerName,rating:betaRating||null,emotional_response:document.getElementById('beta-emotional').value.trim(),craft_note:document.getElementById('beta-craft').value.trim(),notes:document.getElementById('beta-notes').value.trim(),momentum:betaMomentum,reread_flag:betaReread};
-  if(betaEditId){await sb(`beta_feedback?id=eq.${betaEditId}`,{method:'PATCH',body:JSON.stringify(payload)});toast('Feedback updated!');}
-  else{await sb('beta_feedback',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});toast('Feedback submitted — thank you!');}
+  let result;
+  if(betaEditId){result=await sb(`beta_feedback?id=eq.${betaEditId}`,{method:'PATCH',body:JSON.stringify(payload)});}
+  else{result=await sb('beta_feedback',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});}
+  if(result===null){toast('Save failed — please try again');return;}
+  toast(betaEditId?'Feedback updated!':'Feedback submitted — thank you!');
   await loadBetaFeedback();
   if(betaIndex<betaItems.length-1){setTimeout(()=>betaNext(),800);}
   else toast("You've reached the end! Thank you for reading.");
@@ -4613,8 +4778,10 @@ async function saveAnnotation(){
     note,
     anno_source:source
   };
-  if(currentAnnoEditId){await sb(`beta_annotations?id=eq.${currentAnnoEditId}`,{method:'PATCH',body:JSON.stringify(payload)});}
-  else{await sb('beta_annotations',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});}
+  let result;
+  if(currentAnnoEditId){result=await sb(`beta_annotations?id=eq.${currentAnnoEditId}`,{method:'PATCH',body:JSON.stringify(payload)});}
+  else{result=await sb('beta_annotations',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});}
+  if(result===null){toast('Save failed — try running omwty_annotations_v2.sql in Supabase');return;}
   await loadBetaFeedback();
   closeAnnotationPanel();
   renderBetaItem();
