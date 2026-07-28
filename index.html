@@ -668,6 +668,7 @@ select.form-input option{background:var(--bg2)}
             <button class="mode-btn" id="bv-annotations" onclick="setBetaView('annotations')">Annotations</button>
           </div>
           <button class="btn btn-primary btn-sm" onclick="copyBetaLink()"><i class="fas fa-link"></i> Copy Reader Link</button>
+          <button class="btn btn-sm" onclick="exportBetaForClaude()" title="Export all feedback as a document to upload to Claude"><i class="fas fa-file-export"></i> Export for Claude</button>
         </div>
 
         <!-- Stats row -->
@@ -4478,7 +4479,159 @@ function renderBetaAnnotationsView() {
   }).join('');
 }
 
-function renderBetaFeedback() { renderBetaView(); }
+function exportBetaForClaude() {
+  if(!betaFeedback.length && !betaAnnotations.length) {
+    toast('No feedback to export yet');
+    return;
+  }
+
+  const readers = [...new Set([...betaFeedback,...betaAnnotations].map(x=>x.reader_name))];
+  const rated = betaFeedback.filter(f=>f.rating);
+  const avg = rated.length ? rated.reduce((s,f)=>s+f.rating,0)/rated.length : 0;
+  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  let md = `# Beta Reader Feedback — On My Way To You
+Exported: ${today}
+Readers: ${readers.length} | Chapter responses: ${betaFeedback.length} | Annotations: ${betaAnnotations.length}${avg ? ` | Avg rating: ${avg.toFixed(1)} ★` : ''}
+
+---
+
+## How to use this document
+
+This file contains structured beta reader feedback for the novel *On My Way To You*. It is organized chapter by chapter. Each chapter section includes:
+
+- **Reader responses** — overall rating, emotional reaction, craft notes, and whether they wanted to keep reading or had to reread
+- **Inline annotations** — specific passages that readers highlighted, with their reaction (❤️ loved it, 🤔 uncertain, ❓ confused, 🚩 flagged for attention) and any written note
+
+Use this feedback to identify revision priorities, recurring issues, and passages that are landing well.
+
+---
+
+`;
+
+  // Get all chapter numbers that have either feedback or annotations
+  const allChapNums = [...new Set([
+    ...betaFeedback.map(f=>f.chapter_number).filter(Boolean),
+    ...betaAnnotations.map(a=>a.chapter_number).filter(Boolean)
+  ])].sort((a,b)=>a-b);
+
+  allChapNums.forEach(chapNum => {
+    const chap = chapters.find(c=>c.number===chapNum);
+    const chapLabel = chap ? `Chapter ${chapNum} — ${chap.title}` : `Chapter ${chapNum}`;
+    const chapFeedback = betaFeedback.filter(f=>f.chapter_number===chapNum);
+    const chapAnnotations = betaAnnotations.filter(a=>a.chapter_number===chapNum);
+
+    md += `## ${chapLabel}\n`;
+
+    // Chapter stats
+    if(chapFeedback.length) {
+      const chapRated = chapFeedback.filter(f=>f.rating);
+      const chapAvg = chapRated.length ? chapRated.reduce((s,f)=>s+f.rating,0)/chapRated.length : null;
+      const momentum = chapFeedback.filter(f=>f.momentum).length;
+      const reread = chapFeedback.filter(f=>f.reread_flag).length;
+      md += `*${chapFeedback.length} reader${chapFeedback.length!==1?'s':''}`;
+      if(chapAvg) md += ` · avg ${chapAvg.toFixed(1)} ★`;
+      if(momentum) md += ` · ${momentum} wanted to keep reading`;
+      if(reread) md += ` · ${reread} had to reread`;
+      md += '*\n\n';
+
+      // Reader responses
+      md += `### Reader Responses\n\n`;
+      chapFeedback.forEach(f => {
+        const stars = f.rating ? '★'.repeat(f.rating)+'☆'.repeat(5-f.rating) : 'no rating';
+        const signals = [f.momentum?'↓ kept reading':'', f.reread_flag?'↩ had to reread':''].filter(Boolean).join(' · ');
+        md += `**${f.reader_name}** ${stars}${signals?' · '+signals:''}\n`;
+        if(f.emotional_response) md += `- *Emotional response:* ${f.emotional_response}\n`;
+        if(f.craft_note) md += `- *Craft note:* ${f.craft_note}\n`;
+        if(f.notes) md += `- *Additional notes:* ${f.notes}\n`;
+        md += '\n';
+      });
+    }
+
+    // Inline annotations
+    if(chapAnnotations.length) {
+      md += `### Inline Annotations\n\n`;
+      // Group by type
+      const paras = chapAnnotations.filter(a=>a.anno_source==='para'||!a.anno_source);
+      const selections = chapAnnotations.filter(a=>a.anno_source==='selection');
+      const general = chapAnnotations.filter(a=>a.anno_source==='general');
+
+      [...paras,...selections,...general].forEach(a => {
+        const r = ANNO[a.reaction];
+        const reactionLabel = r ? `${r.emoji} ${r.label}` : '✏️ Note';
+        const sourceLabel = a.anno_source==='selection' ? 'Selected text' : a.anno_source==='general' ? 'General note' : 'Paragraph';
+        md += `${reactionLabel} — **${a.reader_name}** *(${sourceLabel})*\n`;
+        if(a.passage) md += `> "${a.passage.trim()}"\n`;
+        if(a.note) md += `${a.note}\n`;
+        md += '\n';
+      });
+    }
+
+    md += '---\n\n';
+  });
+
+  // Entries (anonymous)
+  const entryAnnotations = betaAnnotations.filter(a=>!a.chapter_number);
+  const entryFeedback = betaFeedback.filter(f=>!f.chapter_number);
+  if(entryAnnotations.length || entryFeedback.length) {
+    md += `## Anonymous Entries\n\n`;
+    if(entryFeedback.length) {
+      entryFeedback.forEach(f=>{
+        md += `**${f.reader_name}**\n`;
+        if(f.emotional_response) md += `- *Emotional response:* ${f.emotional_response}\n`;
+        if(f.craft_note) md += `- *Craft note:* ${f.craft_note}\n`;
+        if(f.notes) md += `- *Notes:* ${f.notes}\n`;
+        md += '\n';
+      });
+    }
+    if(entryAnnotations.length) {
+      entryAnnotations.forEach(a=>{
+        const r=ANNO[a.reaction];
+        md += `${r?r.emoji+'':' ✏️'} **${a.reader_name}**\n`;
+        if(a.passage) md += `> "${a.passage.trim()}"\n`;
+        if(a.note) md += `${a.note}\n\n`;
+      });
+    }
+    md += '---\n\n';
+  }
+
+  // Summary section
+  md += `## Summary for Revision\n\n`;
+  md += `**Most flagged chapters:**\n`;
+  const flagCounts = {};
+  betaAnnotations.filter(a=>a.reaction==='flag').forEach(a=>{
+    const k=`Chapter ${a.chapter_number}`;
+    flagCounts[k]=(flagCounts[k]||0)+1;
+  });
+  if(Object.keys(flagCounts).length) {
+    Object.entries(flagCounts).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{
+      md += `- ${k}: ${v} flag${v!==1?'s':''}\n`;
+    });
+  } else {
+    md += `- No passages flagged\n`;
+  }
+  md += '\n';
+
+  md += `**Most confused passages:**\n`;
+  const confusedPassages = betaAnnotations.filter(a=>a.reaction==='confused'&&a.passage);
+  if(confusedPassages.length) {
+    confusedPassages.forEach(a=>{ md += `- Ch. ${a.chapter_number} (${a.reader_name}): "${a.passage.slice(0,80)}${a.passage.length>80?'…':''}"\n`; });
+  } else {
+    md += `- No confusion flagged\n`;
+  }
+  md += '\n';
+
+  md += `**Highest praise:**\n`;
+  const lovedPassages = betaAnnotations.filter(a=>a.reaction==='love'&&a.passage);
+  if(lovedPassages.length) {
+    lovedPassages.forEach(a=>{ md += `- Ch. ${a.chapter_number} (${a.reader_name}): "${a.passage.slice(0,80)}${a.passage.length>80?'…':''}"\n`; });
+  } else {
+    md += `- No passages marked as loved yet\n`;
+  }
+
+  downloadFile(`OMWTY_Beta_Feedback_${today.replace(/,?\s+/g,'_')}.md`, md, 'text/markdown');
+  toast('Feedback exported — upload the .md file to Claude');
+}
 
 function renderBetaFeedback(){
   const el=document.getElementById('beta-feedback-list');
