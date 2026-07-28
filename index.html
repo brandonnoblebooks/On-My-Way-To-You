@@ -211,6 +211,26 @@ body.reader-mode #app,
 body.reader-mode #bookshelf {
   display: none !important;
 }
+/* ── INLINE ANNOTATIONS ── */
+#annotation-panel{position:fixed;bottom:-110%;left:0;right:0;background:#1e1e1e;border:1px solid #333;border-radius:20px 20px 0 0;padding:20px;z-index:601;transition:bottom .28s cubic-bezier(.4,0,.2,1);max-height:72vh;overflow-y:auto}
+#annotation-panel.open{bottom:0}
+#anno-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600}
+#anno-overlay.open{display:block}
+.para-tap{cursor:pointer;padding:3px 0;border-radius:4px;transition:background .15s;-webkit-tap-highlight-color:rgba(255,255,255,.06);position:relative}
+.para-tap:active{background:rgba(255,255,255,.05)}
+.para-tap.anno-love{border-left:3px solid #ef4444;padding-left:10px;margin-left:-13px}
+.para-tap.anno-hmm{border-left:3px solid #f59e0b;padding-left:10px;margin-left:-13px}
+.para-tap.anno-confused{border-left:3px solid #3b82f6;padding-left:10px;margin-left:-13px}
+.para-tap.anno-flag{border-left:3px solid #8b5cf6;padding-left:10px;margin-left:-13px}
+.para-tap.anno-note{border-left:3px solid #22c55e;padding-left:10px;margin-left:-13px}
+.anno-react-btn{font-size:28px;background:none;border:2px solid transparent;cursor:pointer;border-radius:12px;padding:6px 10px;transition:all .15s;opacity:.5;display:flex;flex-direction:column;align-items:center;gap:3px}
+.anno-react-btn:hover,.anno-react-btn.active{opacity:1;transform:scale(1.1)}
+.anno-react-btn.active{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07)}
+.anno-react-btn span{font-size:10px;color:#888;font-family:sans-serif}
+.quick-signal-btn{padding:10px 14px;border-radius:10px;border:1px solid #333;background:transparent;color:#999;font-size:13px;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit}
+.quick-signal-btn:active,.quick-signal-btn.active{border-color:#4a4a4a;background:#2a2a2a;color:#ddd}
+#beta-fab:hover{transform:scale(1.08);background:#333}
+#beta-fab:active{transform:scale(.95)}
 .beta-chapter-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;margin-bottom:8px}
 .star-btn{background:none;border:none;cursor:pointer;font-size:22px;padding:2px 3px;line-height:1;transition:transform .1s;color:#ccc}
 .star-btn:hover,.star-btn.active{color:#f59e0b;transform:scale(1.15)}
@@ -1034,6 +1054,13 @@ select.form-input option{background:var(--bg2)}
               <button class="star-btn" data-val="5" onclick="setBetaRating(5)">★</button>
             </div>
           </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:12px;color:#888;margin-bottom:8px">Quick signals (tap to toggle)</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="quick-signal-btn" id="btn-momentum" onclick="toggleBetaMomentum()">↓ I wanted to keep reading</button>
+              <button class="quick-signal-btn" id="btn-reread" onclick="toggleBetaReread()">↩ I had to reread part of this</button>
+            </div>
+          </div>
           <div style="margin-bottom:12px">
             <label style="font-size:12px;color:#888;display:block;margin-bottom:5px">How did this make you feel?</label>
             <textarea id="beta-emotional" style="width:100%;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:9px 12px;font-size:13px;color:#ddd;resize:vertical;min-height:70px;outline:none;font-family:inherit" placeholder="Your emotional reaction…" onfocus="this.style.borderColor='#666'" onblur="this.style.borderColor='#444'"></textarea>
@@ -1052,6 +1079,33 @@ select.form-input option{background:var(--bg2)}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <!-- Selection toolbar — appears at top when text is selected -->
+  <div id="selection-toolbar" style="display:none;position:fixed;top:52px;left:0;right:0;background:#2a2a2a;border-bottom:1px solid #444;padding:10px 16px;z-index:599;align-items:center;gap:12px">
+    <div id="sel-preview" style="flex:1;font-size:12px;color:#888;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    <button onclick="openAnnotationFromSelection()" style="background:#444;border:1px solid #666;border-radius:8px;color:#ddd;font-size:13px;padding:6px 12px;cursor:pointer;white-space:nowrap;font-family:inherit">✏️ Note this</button>
+    <button onclick="clearBetaSelection()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;padding:2px 6px;line-height:1">✕</button>
+  </div>
+  <!-- Floating general note button -->
+  <button id="beta-fab" onclick="openGeneralNote()" title="Add a general note" style="display:none;position:fixed;bottom:28px;right:20px;width:52px;height:52px;border-radius:50%;background:#2a2a2a;border:1px solid #555;color:#ccc;font-size:22px;cursor:pointer;z-index:598;box-shadow:0 4px 16px rgba(0,0,0,.5);align-items:center;justify-content:center;transition:transform .15s">💬</button>
+  <!-- Annotation overlay + slide-up panel -->
+  <div id="anno-overlay" onclick="closeAnnotationPanel()"></div>
+  <div id="annotation-panel">
+    <div style="width:40px;height:4px;background:#444;border-radius:2px;margin:0 auto 16px"></div>
+    <div id="anno-panel-label" style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Your note on this passage</div>
+    <div id="anno-passage-preview" style="font-style:italic;color:#777;font-size:13px;line-height:1.55;margin-bottom:16px;padding:10px 12px;background:#2a2a2a;border-radius:8px;max-height:80px;overflow:hidden"></div>
+    <div style="display:flex;justify-content:space-around;margin-bottom:16px">
+      <button class="anno-react-btn" data-r="love" onclick="setAnnoReaction('love')">❤️<span>Love this</span></button>
+      <button class="anno-react-btn" data-r="hmm" onclick="setAnnoReaction('hmm')">🤔<span>Hmm...</span></button>
+      <button class="anno-react-btn" data-r="confused" onclick="setAnnoReaction('confused')">❓<span>Confused</span></button>
+      <button class="anno-react-btn" data-r="flag" onclick="setAnnoReaction('flag')">🚩<span>Flag it</span></button>
+    </div>
+    <textarea id="anno-note-input" placeholder="Add a note… (optional)" style="width:100%;background:#2a2a2a;border:1px solid #444;border-radius:8px;padding:10px 12px;font-size:14px;color:#ddd;resize:none;min-height:72px;outline:none;font-family:inherit;margin-bottom:12px;box-sizing:border-box" onfocus="this.style.borderColor='#666'" onblur="this.style.borderColor='#444'"></textarea>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeAnnotationPanel()" style="flex:1;padding:12px;background:#2a2a2a;border:1px solid #444;border-radius:10px;color:#888;font-size:14px;cursor:pointer;font-family:inherit">Cancel</button>
+      <button id="anno-delete-btn" onclick="deleteAnnotation()" style="display:none;padding:12px 16px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:10px;color:#ef4444;font-size:14px;cursor:pointer;font-family:inherit">Remove</button>
+      <button onclick="saveAnnotation()" style="flex:2;padding:12px;background:#333;border:1px solid #555;border-radius:10px;color:#ddd;font-size:14px;cursor:pointer;font-weight:500;font-family:inherit">Save Note</button>
     </div>
   </div>
 </div>
@@ -3118,8 +3172,9 @@ let passageNotes = [];
 let anonEntries = [];
 let editingAnonId = null;
 let betaFeedback = [], submissionDocs = [], agentQueries = [], arcReaders = [], compTitles = [];
-let betaItems = [], betaIndex = 0, betaRating = 0, betaEditId = null;
+let betaItems = [], betaIndex = 0, betaRating = 0, betaEditId = null, betaMomentum = false, betaReread = false;
 let subMode = 'traditional', subSaveTimers = {};
+let betaAnnotations = [], currentAnnoPara = null, currentAnnoParaIdx = null, currentAnnoReaction = '', currentAnnoEditId = null;
 
 function checkTextSelection() {
   const sel = window.getSelection();
@@ -4241,7 +4296,14 @@ function loadSidebarState() {
 
 // ─── BETA READERS ─────────────────────────────────────────
 
-async function loadBetaFeedback(){const d=await sb('beta_feedback?order=created_at.desc');if(d)betaFeedback=d;}
+async function loadBetaFeedback(){
+  const [fb, ann] = await Promise.all([
+    sb('beta_feedback?order=created_at.desc'),
+    sb('beta_annotations?order=created_at.desc')
+  ]);
+  if(fb) betaFeedback=fb;
+  if(ann) betaAnnotations=ann;
+}
 
 function copyBetaLink(){const url=window.location.origin+window.location.pathname+'?reader=true';navigator.clipboard.writeText(url).then(()=>toast('Reader link copied! Share it with beta readers.')).catch(()=>toast('Link: '+url));}
 
@@ -4269,32 +4331,57 @@ function renderBetaFeedback(){
   let filtered=betaFeedback;
   if(rf)filtered=filtered.filter(f=>f.reader_name===rf);
   if(cf)filtered=filtered.filter(f=>String(f.chapter_number)===cf);
-  if(!filtered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-users-cog"></i><p>No feedback yet — share the reader link to get started.</p></div>';return;}
-  // Group by chapter_number
-  const grouped={};
-  filtered.forEach(f=>{const k=f.chapter_number||'entry';if(!grouped[k])grouped[k]=[];grouped[k].push(f);});
-  el.innerHTML=Object.keys(grouped).sort((a,b)=>a-b).map(k=>{
-    const items=grouped[k];
-    const chapLabel=k==='entry'?'Anonymous Entry':`Chapter ${k}`;
-    const avgR=items.filter(f=>f.rating).length?items.filter(f=>f.rating).reduce((s,f)=>s+f.rating,0)/items.filter(f=>f.rating).length:0;
-    return`<div class="beta-chapter-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600;color:var(--text);flex:1">${chapLabel}</div>
-        ${avgR?`<span style="font-size:12px;color:var(--amber)">${'★'.repeat(Math.round(avgR))}${'☆'.repeat(5-Math.round(avgR))} <span style="color:var(--text3)">${avgR.toFixed(1)}</span></span>`:''}
-        <span style="font-size:11px;color:var(--text3)">${items.length} response${items.length!==1?'s':''}</span>
-      </div>
-      ${items.map(f=>`<div class="feedback-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <span class="feedback-reader-badge">${escHtml(f.reader_name)}</span>
-          ${f.rating?`<span style="color:var(--amber);font-size:13px">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</span>`:''}
-          <span style="font-size:11px;color:var(--text3);margin-left:auto">${timeAgo(f.created_at)}</span>
+  let html='';
+  // Annotations section
+  let annFiltered=betaAnnotations;
+  if(rf)annFiltered=annFiltered.filter(a=>a.reader_name===rf);
+  if(cf)annFiltered=annFiltered.filter(a=>String(a.chapter_number)===cf);
+  if(annFiltered.length){
+    html+=`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">Inline Annotations (${annFiltered.length})</div>`;
+    const byChap={};annFiltered.forEach(a=>{const k=a.chapter_number||0;if(!byChap[k])byChap[k]=[];byChap[k].push(a);});
+    html+=Object.keys(byChap).sort((a,b)=>a-b).map(k=>{
+      const items=byChap[k];
+      return`<div style="margin-bottom:12px"><div style="font-size:12px;color:var(--text3);margin-bottom:6px">Chapter ${k}</div>${items.map(a=>{
+        const r=ANNO[a.reaction]||{emoji:'✏️',color:'var(--text3)',label:'Note'};
+        const sourceTag=a.anno_source==='selection'?'<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(59,130,246,.12);color:#60a5fa;margin-left:5px">selected text</span>':a.anno_source==='general'?'<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--text3);margin-left:5px">general note</span>':'';
+        return`<div class="feedback-card" style="border-left:3px solid ${r.color}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:14px">${r.emoji}</span><span class="feedback-reader-badge">${escHtml(a.reader_name)}</span>${sourceTag}<span style="font-size:10px;color:var(--text3);margin-left:auto">${timeAgo(a.created_at)}</span></div>${a.passage?`<div style="font-size:12px;color:var(--text3);font-style:italic;margin-bottom:5px;padding:6px 8px;background:var(--bg3);border-radius:4px;line-height:1.45">"${escHtml(a.passage.slice(0,140))}${a.passage.length>140?'…':''}"</div>`:''} ${a.note?`<div style="font-size:13px;color:var(--text2)">${escHtml(a.note)}</div>`:''}</div>`;
+      }).join('')}</div>`;
+    }).join('');
+    html+='</div>';
+  }
+  // Chapter-level feedback
+  if(!filtered.length&&!annFiltered.length){el.innerHTML='<div class="empty-state"><i class="fas fa-users-cog"></i><p>No feedback yet — share the reader link to get started.</p></div>';return;}
+  if(filtered.length){
+    html+=`<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">Chapter Feedback (${filtered.length})</div>`;
+    const grouped={};
+    filtered.forEach(f=>{const k=f.chapter_number||'entry';if(!grouped[k])grouped[k]=[];grouped[k].push(f);});
+    html+=Object.keys(grouped).sort((a,b)=>a-b).map(k=>{
+      const items=grouped[k];
+      const chapLabel=k==='entry'?'Anonymous Entry':`Chapter ${k}`;
+      const avgR=items.filter(f=>f.rating).length?items.filter(f=>f.rating).reduce((s,f)=>s+f.rating,0)/items.filter(f=>f.rating).length:0;
+      return`<div class="beta-chapter-card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:600;color:var(--text);flex:1">${chapLabel}</div>
+          ${avgR?`<span style="font-size:12px;color:var(--amber)">${'★'.repeat(Math.round(avgR))}${'☆'.repeat(5-Math.round(avgR))} <span style="color:var(--text3)">${avgR.toFixed(1)}</span></span>`:''}
+          <span style="font-size:11px;color:var(--text3)">${items.length} response${items.length!==1?'s':''}</span>
         </div>
-        ${f.emotional_response?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Emotional response</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.emotional_response)}</div></div>`:''}
-        ${f.craft_note?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Craft note</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.craft_note)}</div></div>`:''}
-        ${f.notes?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Notes</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.notes)}</div></div>`:''}
-      </div>`).join('')}
-    </div>`;
-  }).join('');
+        ${items.map(f=>`<div class="feedback-card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <span class="feedback-reader-badge">${escHtml(f.reader_name)}</span>
+            ${f.rating?`<span style="color:var(--amber);font-size:13px">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</span>`:''}
+            ${f.momentum?'<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:rgba(42,128,80,.12);color:var(--green)">↓ Kept reading</span>':''}
+            ${f.reread_flag?'<span style="font-size:11px;padding:1px 7px;border-radius:10px;background:rgba(184,120,0,.12);color:var(--amber)">↩ Reread</span>':''}
+            <span style="font-size:11px;color:var(--text3);margin-left:auto">${timeAgo(f.created_at)}</span>
+          </div>
+          ${f.emotional_response?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Emotional response</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.emotional_response)}</div></div>`:''}
+          ${f.craft_note?`<div style="margin-bottom:7px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Craft note</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.craft_note)}</div></div>`:''}
+          ${f.notes?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Notes</div><div style="font-size:13px;color:var(--text2)">${escHtml(f.notes)}</div></div>`:''}
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+    html+='</div>';
+  }
+  el.innerHTML=html;
 }
 
 // ── Beta Reader Mode (reader view) ──
@@ -4314,12 +4401,17 @@ function initBetaReaderMode(){
     ...chapters.filter(c=>c.body&&c.body.trim()).map(c=>({type:'chapter',sort:c.number,data:c})),
     ...anonEntries.filter(e=>e.content&&e.content.trim()).map(e=>({type:'anon',sort:e.after_chapter+0.5,data:e}))
   ].sort((a,b)=>a.sort-b.sort);
-  betaIndex=0;betaRating=0;betaEditId=null;
+  betaIndex=0;betaRating=0;betaEditId=null;betaMomentum=false;betaReread=false;
   document.getElementById('beta-reader-overlay').style.display='flex';
+  const fab=document.getElementById('beta-fab');if(fab)fab.style.display='flex';
   renderBetaItem();
 }
 
-function closeBetaReader(){document.getElementById('beta-reader-overlay').style.display='none';}
+function closeBetaReader(){
+  document.getElementById('beta-reader-overlay').style.display='none';
+  const fab=document.getElementById('beta-fab');if(fab)fab.style.display='none';
+  clearBetaSelection();
+}
 
 function renderBetaItem(){
   const item=betaItems[betaIndex];if(!item)return;
@@ -4327,28 +4419,56 @@ function renderBetaItem(){
   document.getElementById('beta-next').disabled=betaIndex===betaItems.length-1;
   document.getElementById('beta-indicator').textContent=`${betaIndex+1} of ${betaItems.length}`;
   const area=document.getElementById('beta-content-area');
+  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
+  const contentId=item.data.id;
+  // Get this reader's annotations for this content item
+  const myAnnos=betaAnnotations.filter(a=>a.content_id===contentId&&a.reader_name===readerName);
+  const annoByPara={};myAnnos.forEach(a=>{annoByPara[a.para_index]=a;});
+  const REACTION_COLORS={love:'#ef4444',hmm:'#f59e0b',confused:'#3b82f6',flag:'#8b5cf6'};
+
+  function makePara(p,i){
+    const ann=annoByPara[i];
+    const cls=ann?(ann.reaction?'para-tap anno-'+ann.reaction:'para-tap anno-note'):'para-tap';
+    const indicator=ann?`<span style="position:absolute;right:-4px;top:4px;font-size:12px;line-height:1">${ann.reaction==='love'?'❤️':ann.reaction==='hmm'?'🤔':ann.reaction==='confused'?'❓':ann.reaction==='flag'?'🚩':'✏️'}</span>`:'';
+    return`<p class="${cls}" data-idx="${i}" onclick="openAnnotationPanel(this)" style="margin-bottom:1.4em;text-indent:2em;position:relative">${escHtml(p)}${indicator}</p>`;
+  }
+
   if(item.type==='chapter'){
     const c=item.data;
     const paras=c.body.split('\n').filter(p=>p.trim());
     document.getElementById('beta-form-title').textContent=`Your feedback on Chapter ${c.number}`;
-    area.innerHTML=`<div style="text-align:center;margin-bottom:40px;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div><div style="font-size:24px;color:#e0e0e0;margin-bottom:6px">${escHtml(c.title)}</div>${c.pov?`<div style="font-size:12px;color:#555;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}</div>${paras.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}<div style="text-align:center;margin-top:40px;color:#333;font-size:18px">* * *</div>`;
+    area.innerHTML=`<div style="text-align:center;margin-bottom:40px;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,.07)"><div style="font-size:11px;color:#555;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">Chapter ${c.number}</div><div style="font-size:24px;color:#e0e0e0;margin-bottom:6px">${escHtml(c.title)}</div>${c.pov?`<div style="font-size:12px;color:#555;font-style:italic">${escHtml(c.pov)}'s POV</div>`:''}</div><div style="font-size:13px;color:#555;font-style:italic;margin-bottom:16px;text-align:center">Tap any paragraph to leave a note</div>${paras.map((p,i)=>makePara(p,i)).join('')}<div style="text-align:center;margin-top:40px;color:#333;font-size:18px">* * *</div>`;
   } else {
     const e=item.data;
     const paras=e.content.split('\n').filter(p=>p.trim());
     document.getElementById('beta-form-title').textContent='Your feedback on this passage';
-    area.innerHTML=`<div style="text-align:center;margin-bottom:36px;font-size:20px;color:#333">—</div><div style="font-style:italic">${paras.map(p=>`<p style="margin-bottom:1.4em;text-indent:2em">${escHtml(p)}</p>`).join('')}</div><div style="text-align:center;margin-top:36px;color:#333;font-size:18px">—</div>`;
+    area.innerHTML=`<div style="text-align:center;margin-bottom:36px;font-size:20px;color:#333">—</div><div style="font-size:13px;color:#555;font-style:italic;margin-bottom:16px;text-align:center">Tap any paragraph to leave a note</div><div style="font-style:italic">${paras.map((p,i)=>makePara(p,i)).join('')}</div><div style="text-align:center;margin-top:36px;color:#333;font-size:18px">—</div>`;
   }
   document.getElementById('beta-reader-body').scrollTop=0;
-  // Check if already submitted
-  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
-  const contentId=item.type==='chapter'?item.data.id:item.data.id;
+  // Check existing chapter-level feedback
   const existing=betaFeedback.find(f=>f.content_id===contentId&&f.reader_name===readerName);
   if(existing){betaEditId=existing.id;populateBetaForm(existing);document.getElementById('beta-already-submitted').style.display='block';}
   else{betaEditId=null;clearBetaForm();document.getElementById('beta-already-submitted').style.display='none';}
 }
 
-function populateBetaForm(f){setBetaRating(f.rating||0);document.getElementById('beta-emotional').value=f.emotional_response||'';document.getElementById('beta-craft').value=f.craft_note||'';document.getElementById('beta-notes').value=f.notes||'';}
-function clearBetaForm(){setBetaRating(0);['beta-emotional','beta-craft','beta-notes'].forEach(id=>document.getElementById(id).value='');}
+function populateBetaForm(f){
+  setBetaRating(f.rating||0);
+  document.getElementById('beta-emotional').value=f.emotional_response||'';
+  document.getElementById('beta-craft').value=f.craft_note||'';
+  document.getElementById('beta-notes').value=f.notes||'';
+  betaMomentum=!!f.momentum;betaReread=!!f.reread_flag;
+  document.getElementById('btn-momentum').classList.toggle('active',betaMomentum);
+  document.getElementById('btn-reread').classList.toggle('active',betaReread);
+}
+function clearBetaForm(){
+  setBetaRating(0);
+  ['beta-emotional','beta-craft','beta-notes'].forEach(id=>document.getElementById(id).value='');
+  betaMomentum=false;betaReread=false;
+  document.getElementById('btn-momentum').classList.remove('active');
+  document.getElementById('btn-reread').classList.remove('active');
+}
+function toggleBetaMomentum(){betaMomentum=!betaMomentum;document.getElementById('btn-momentum').classList.toggle('active',betaMomentum);}
+function toggleBetaReread(){betaReread=!betaReread;document.getElementById('btn-reread').classList.toggle('active',betaReread);}
 function showBetaEditForm(){document.getElementById('beta-already-submitted').style.display='none';}
 function setBetaRating(val){betaRating=val;document.querySelectorAll('.star-btn').forEach(b=>{b.classList.toggle('active',parseInt(b.dataset.val)<=val);});}
 function betaPrev(){if(betaIndex>0){betaIndex--;betaRating=0;betaEditId=null;renderBetaItem();}}
@@ -4357,13 +4477,157 @@ function betaNext(){if(betaIndex<betaItems.length-1){betaIndex++;betaRating=0;be
 async function submitBetaFeedback(){
   const readerName=localStorage.getItem('omwty_display_name')||'Reader';
   const item=betaItems[betaIndex];if(!item)return;
-  const payload={content_type:item.type==='chapter'?'chapter':'entry',content_id:item.data.id,chapter_number:item.type==='chapter'?item.data.number:item.data.after_chapter,content_title:item.type==='chapter'?item.data.title:(item.data.title||`Entry after Ch. ${item.data.after_chapter}`),reader_name:readerName,rating:betaRating||null,emotional_response:document.getElementById('beta-emotional').value.trim(),craft_note:document.getElementById('beta-craft').value.trim(),notes:document.getElementById('beta-notes').value.trim()};
+  const payload={content_type:item.type==='chapter'?'chapter':'entry',content_id:item.data.id,chapter_number:item.type==='chapter'?item.data.number:item.data.after_chapter,content_title:item.type==='chapter'?item.data.title:(item.data.title||`Entry after Ch. ${item.data.after_chapter}`),reader_name:readerName,rating:betaRating||null,emotional_response:document.getElementById('beta-emotional').value.trim(),craft_note:document.getElementById('beta-craft').value.trim(),notes:document.getElementById('beta-notes').value.trim(),momentum:betaMomentum,reread_flag:betaReread};
   if(betaEditId){await sb(`beta_feedback?id=eq.${betaEditId}`,{method:'PATCH',body:JSON.stringify(payload)});toast('Feedback updated!');}
   else{await sb('beta_feedback',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});toast('Feedback submitted — thank you!');}
   await loadBetaFeedback();
-  // Auto-advance
   if(betaIndex<betaItems.length-1){setTimeout(()=>betaNext(),800);}
   else toast("You've reached the end! Thank you for reading.");
+}
+
+// ── Inline Annotations ──
+const ANNO={love:{emoji:'❤️',color:'#ef4444',label:'Loved this'},hmm:{emoji:'🤔',color:'#f59e0b',label:'Hmm...'},confused:{emoji:'❓',color:'#3b82f6',label:'Confused'},flag:{emoji:'🚩',color:'#8b5cf6',label:'Flagged'}};
+
+// Track current selection text
+let currentSelectionText = '';
+
+// Listen for text selection in beta reader
+let selTimer = null;
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(() => {
+    const overlay = document.getElementById('beta-reader-overlay');
+    if(!overlay || overlay.style.display !== 'flex') return;
+    const sel = window.getSelection();
+    const text = sel ? sel.toString().trim() : '';
+    const toolbar = document.getElementById('selection-toolbar');
+    const body = document.getElementById('beta-reader-body');
+    if(text.length > 5 && body && sel.anchorNode && body.contains(sel.anchorNode)) {
+      currentSelectionText = text;
+      document.getElementById('sel-preview').textContent = '"' + text.slice(0, 70) + (text.length > 70 ? '…' : '') + '"';
+      if(toolbar) toolbar.style.display = 'flex';
+    } else {
+      if(toolbar) toolbar.style.display = 'none';
+      if(!text) currentSelectionText = '';
+    }
+  }, 250);
+});
+
+function clearBetaSelection() {
+  window.getSelection()?.removeAllRanges();
+  currentSelectionText = '';
+  const toolbar = document.getElementById('selection-toolbar');
+  if(toolbar) toolbar.style.display = 'none';
+}
+
+function openAnnotationFromSelection() {
+  if(!currentSelectionText) return;
+  const item = betaItems[betaIndex]; if(!item) return;
+  const readerName = localStorage.getItem('omwty_display_name') || 'Reader';
+  // Check for existing selection annotation on this text
+  const existing = betaAnnotations.find(a => a.content_id === item.data.id && a.reader_name === readerName && a.anno_source === 'selection' && a.passage === currentSelectionText);
+  currentAnnoPara = null;
+  currentAnnoParaIdx = null;
+  currentAnnoReaction = '';
+  currentAnnoEditId = existing ? existing.id : null;
+  document.getElementById('anno-passage-preview').textContent = currentSelectionText;
+  document.getElementById('anno-passage-preview').style.display = 'block';
+  document.getElementById('anno-note-input').value = existing ? existing.note || '' : '';
+  document.getElementById('anno-panel-label').textContent = 'Note on selected text';
+  setAnnoReaction(existing ? existing.reaction || '' : '');
+  document.getElementById('anno-delete-btn').style.display = existing ? 'block' : 'none';
+  clearBetaSelection();
+  document.getElementById('anno-overlay').classList.add('open');
+  document.getElementById('annotation-panel').classList.add('open');
+  // Store source for saveAnnotation
+  document.getElementById('annotation-panel').dataset.source = 'selection';
+  document.getElementById('annotation-panel').dataset.passage = currentSelectionText;
+}
+
+function openGeneralNote() {
+  const item = betaItems[betaIndex]; if(!item) return;
+  const readerName = localStorage.getItem('omwty_display_name') || 'Reader';
+  currentAnnoPara = null; currentAnnoParaIdx = null; currentAnnoReaction = ''; currentAnnoEditId = null;
+  document.getElementById('anno-passage-preview').textContent = '';
+  document.getElementById('anno-passage-preview').style.display = 'none';
+  document.getElementById('anno-note-input').value = '';
+  document.getElementById('anno-panel-label').textContent = 'General chapter note';
+  setAnnoReaction('');
+  document.getElementById('anno-delete-btn').style.display = 'none';
+  document.getElementById('anno-overlay').classList.add('open');
+  document.getElementById('annotation-panel').classList.add('open');
+  document.getElementById('annotation-panel').dataset.source = 'general';
+  document.getElementById('annotation-panel').dataset.passage = '';
+  setTimeout(() => document.getElementById('anno-note-input').focus(), 300);
+}
+
+function openAnnotationPanel(paraEl){
+  // Don't open if user is in the middle of a text selection
+  const sel = window.getSelection();
+  if(sel && sel.toString().trim().length > 3) return;
+  const idx=parseInt(paraEl.dataset.idx);
+  const item=betaItems[betaIndex];if(!item)return;
+  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
+  currentAnnoPara=paraEl;currentAnnoParaIdx=idx;currentAnnoReaction='';currentAnnoEditId=null;
+  const existing=betaAnnotations.find(a=>a.content_id===item.data.id&&a.reader_name===readerName&&a.para_index===idx&&(a.anno_source==='para'||!a.anno_source));
+  document.getElementById('anno-passage-preview').textContent=paraEl.textContent.slice(0,160)+(paraEl.textContent.length>160?'…':'');
+  document.getElementById('anno-passage-preview').style.display = 'block';
+  document.getElementById('anno-note-input').value=existing?existing.note||'':'';
+  document.getElementById('anno-panel-label').textContent = 'Note on this paragraph';
+  setAnnoReaction(existing?existing.reaction||'':'');
+  document.getElementById('anno-delete-btn').style.display=existing?'block':'none';
+  if(existing)currentAnnoEditId=existing.id;
+  document.getElementById('annotation-panel').dataset.source = 'para';
+  document.getElementById('annotation-panel').dataset.passage = paraEl.textContent.slice(0,300);
+  document.getElementById('anno-overlay').classList.add('open');
+  document.getElementById('annotation-panel').classList.add('open');
+}
+
+function closeAnnotationPanel(){
+  document.getElementById('annotation-panel').classList.remove('open');
+  document.getElementById('anno-overlay').classList.remove('open');
+  currentAnnoPara=null;currentAnnoParaIdx=null;currentAnnoReaction='';currentAnnoEditId=null;
+}
+
+function setAnnoReaction(r){
+  currentAnnoReaction=r;
+  document.querySelectorAll('.anno-react-btn').forEach(b=>{b.classList.toggle('active',b.dataset.r===r);});
+}
+
+async function saveAnnotation(){
+  const item=betaItems[betaIndex];if(!item)return;
+  const readerName=localStorage.getItem('omwty_display_name')||'Reader';
+  const note=document.getElementById('anno-note-input').value.trim();
+  const panel=document.getElementById('annotation-panel');
+  const source=panel.dataset.source||'para';
+  const passage=source==='para'?(currentAnnoPara?currentAnnoPara.textContent.slice(0,300):''):panel.dataset.passage||'';
+  if(!currentAnnoReaction&&!note){closeAnnotationPanel();return;}
+  const payload={
+    content_type:item.type==='chapter'?'chapter':'entry',
+    content_id:item.data.id,
+    chapter_number:item.type==='chapter'?item.data.number:item.data.after_chapter,
+    reader_name:readerName,
+    para_index:source==='para'?currentAnnoParaIdx:null,
+    passage,
+    reaction:currentAnnoReaction,
+    note,
+    anno_source:source
+  };
+  if(currentAnnoEditId){await sb(`beta_annotations?id=eq.${currentAnnoEditId}`,{method:'PATCH',body:JSON.stringify(payload)});}
+  else{await sb('beta_annotations',{method:'POST',body:JSON.stringify(payload),headers:{...h,'Prefer':'return=representation'}});}
+  await loadBetaFeedback();
+  closeAnnotationPanel();
+  renderBetaItem();
+  toast(source==='general'?'General note saved':'Note saved');
+}
+
+async function deleteAnnotation(){
+  if(!currentAnnoEditId||!confirm('Remove this note?'))return;
+  await sb(`beta_annotations?id=eq.${currentAnnoEditId}`,{method:'DELETE'});
+  await loadBetaFeedback();
+  closeAnnotationPanel();
+  renderBetaItem();
+  toast('Note removed');
 }
 
 // ─── SUBMISSION ────────────────────────────────────────────
