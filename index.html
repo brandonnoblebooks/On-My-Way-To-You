@@ -912,6 +912,12 @@ select.form-input option{background:var(--bg2)}
       <span id="editor-chap-num" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
       <input id="editor-title" style="background:transparent;border:none;font-size:15px;font-weight:600;color:var(--text);outline:none;flex:1;min-width:80px" placeholder="Chapter title…"/>
     </div>
+    <!-- Draft selector -->
+    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+      <select id="editor-draft-select" onchange="switchDraft(this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);max-width:110px;cursor:pointer"></select>
+      <button onclick="createNewDraft()" title="New draft" style="padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;line-height:1">+</button>
+      <button id="editor-primary-btn" onclick="setDraftPrimary()" title="Set as primary (used in Read Mode and Export)" style="padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text3);cursor:pointer;font-size:12px;line-height:1">★</button>
+    </div>
     <select id="editor-status" class="form-input" style="width:auto;padding:5px 10px;font-size:12px">
       <option value="outline">Outline</option><option value="draft">Draft</option><option value="review">In Review</option><option value="done">Done</option>
     </select>
@@ -951,9 +957,10 @@ select.form-input option{background:var(--bg2)}
     <!-- HISTORY PANEL -->
     <div id="editor-history-panel" style="width:360px;border-left:1px solid var(--border);background:var(--bg2);display:none;flex-direction:column;overflow:hidden">
       <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Version History</span>
-        <button class="btn btn-sm btn-primary" onclick="saveVersion()" style="font-size:11px;padding:4px 10px"><i class="fas fa-bookmark"></i> Save Version</button>
+        <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Drafts</span>
+        <button class="btn btn-sm btn-primary" onclick="saveVersion()" style="font-size:11px;padding:4px 10px"><i class="fas fa-camera"></i> Snapshot</button>
       </div>
+      <div style="padding:8px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5;flex-shrink:0">Use the <strong style="color:var(--text2)">draft selector above</strong> to switch between drafts. <em>Snapshot</em> saves a named copy of the current state.</div>
       <div id="editor-history-list" style="flex:1;overflow-y:auto;padding:8px"></div>
     </div>
     <!-- VOICE DRIFT PANEL -->
@@ -2734,25 +2741,25 @@ async function saveEvent() {
 
 // ─── CHAPTER EDITOR ──────────────────────────────────────
 let editorChapterId = null;
+let currentDraftId = null;
 
 function openChapterEditor(id) {
   const c = chapters.find(x=>x.id===id);
   if(!c) return;
   editorChapterId = id;
+  currentDraftId = null;
   document.getElementById('editor-chap-num').textContent = 'Ch. '+c.number;
   document.getElementById('editor-title').value = c.title||'';
   document.getElementById('editor-status').value = c.status||'outline';
-  document.getElementById('editor-body').value = c.body||'';
   document.getElementById('editor-brief-content').textContent = c.notes||'No brief available for this chapter.';
-  editorWordCount();
   showEditorTab('write');
-  loadVersionHistory(id);
   loadPassageNotes(id).then(()=>renderPassageNotes());
   updateEntryPrompt();
   if(ttsActive) { speechSynthesis.cancel(); ttsActive=false; }
   const overlay = document.getElementById('chapter-editor-overlay');
   overlay.style.display = 'flex';
-  document.getElementById('editor-body').focus();
+  // Load drafts — auto-creates Draft 1 from chapters.body if none exist
+  loadVersionHistory(id);
 }
 
 function closeChapterEditor() {
@@ -2790,16 +2797,35 @@ function editorWordCount() {
   document.getElementById('editor-wc-display').textContent = words.toLocaleString()+' words';
 }
 
-async function saveChapterEditor() {
+async function saveChapterEditor(silent=false) {
   if(!editorChapterId) return;
   const body = document.getElementById('editor-body').value;
   const title = document.getElementById('editor-title').value.trim();
   const status = document.getElementById('editor-status').value;
   const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
-  await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({body, title, status, word_count, updated_at:new Date().toISOString()})});
+  const now = new Date().toISOString();
+
+  // Save to current draft version
+  if(currentDraftId) {
+    await sb(`chapter_versions?id=eq.${currentDraftId}`, {method:'PATCH', body:JSON.stringify({body, word_count, updated_at:now})});
+    // Keep draft state in sync
+    const draft = versions.find(v=>v.id===currentDraftId);
+    if(draft) { draft.body=body; draft.word_count=word_count; draft.updated_at=now; }
+    // Sync to chapters.body only if this is the primary draft (for Read Mode / Export)
+    const isPrimary = draft?.is_primary || versions.length===1;
+    if(isPrimary) {
+      await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({title, status, body, word_count, updated_at:now})});
+    } else {
+      await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({title, status, updated_at:now})});
+    }
+  } else {
+    // No draft system yet — save directly (fallback)
+    await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({body, title, status, word_count, updated_at:now})});
+  }
+
   await loadChapters();
   renderDashboard();
-  toast('Chapter saved');
+  if(!silent) toast('Saved');
 }
 
 // Auto-save every 30 seconds while editor is open
@@ -2813,54 +2839,177 @@ setInterval(async()=>{
 let versions = [];
 
 async function loadVersionHistory(chapterId) {
-  const d = await sb(`chapter_versions?chapter_id=eq.${chapterId}&order=created_at.desc&limit=20`);
+  const d = await sb(`chapter_versions?chapter_id=eq.${chapterId}&order=version_number`);
   if(d) versions = d;
+
+  // Auto-create Draft 1 if no versions exist
+  if(!versions.length) {
+    const c = chapters.find(x=>x.id===chapterId);
+    const body = c?.body||'';
+    const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+    const r = await sb('chapter_versions', {
+      method:'POST',
+      body: JSON.stringify({chapter_id:chapterId, label:'Draft 1', version_number:1, body, word_count:wc, is_primary:true}),
+      headers:{...h,'Prefer':'return=representation'}
+    });
+    if(r&&r[0]) versions = [r[0]];
+  }
+
+  // Activate primary or first draft
+  const primary = versions.find(v=>v.is_primary) || versions[0];
+  if(primary) loadDraftIntoEditor(primary);
+
+  renderVersionSelector();
   renderVersionHistory();
+}
+
+function loadDraftIntoEditor(draft) {
+  currentDraftId = draft.id;
+  document.getElementById('editor-body').value = draft.body||'';
+  editorWordCount();
+  document.getElementById('editor-body').focus();
+  // Update primary star
+  const isPrimary = !!draft.is_primary || versions.length===1;
+  const btn = document.getElementById('editor-primary-btn');
+  if(btn) {
+    btn.style.color = isPrimary ? 'var(--amber)' : 'var(--text3)';
+    btn.title = isPrimary ? 'This is the primary draft (used in Read Mode & Export)' : 'Set as primary draft';
+  }
+}
+
+function renderVersionSelector() {
+  const sel = document.getElementById('editor-draft-select');
+  if(!sel) return;
+  sel.innerHTML = versions.map(v =>
+    `<option value="${v.id}"${v.id===currentDraftId?' selected':''}>${escHtml(v.label||'Draft')}${v.is_primary?' ★':''}</option>`
+  ).join('');
 }
 
 function renderVersionHistory() {
   const el = document.getElementById('editor-history-list');
-  if(!versions.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">No saved versions yet. Click "Save Version" to snapshot the current draft.</div>'; return; }
+  if(!versions.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">No drafts yet.</div>'; return; }
   el.innerHTML = versions.map(v=>`
-    <div style="padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:6px;background:var(--bg3);border:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <span style="font-size:12px;font-weight:500;color:var(--text)">${escHtml(v.label||'Version')}</span>
-        <span style="font-size:10px;color:var(--text3)">${timeAgo(v.created_at)}</span>
+    <div style="padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:6px;background:${v.id===currentDraftId?'var(--accent-glow)':'var(--bg3)'};border:1px solid ${v.id===currentDraftId?'var(--accent)':'var(--border)'}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500;color:var(--text);flex:1">${escHtml(v.label||'Draft')}</span>
+        ${v.is_primary?'<span style="font-size:10px;color:var(--amber)">★ primary</span>':''}
+        ${v.id===currentDraftId?'<span style="font-size:10px;color:var(--accent)">editing</span>':''}
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${(v.word_count||0).toLocaleString()} words</div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm" onclick="previewVersion('${v.id}')" style="font-size:10px;padding:3px 8px">Preview</button>
-        <button class="btn btn-sm" onclick="restoreVersion('${v.id}')" style="font-size:10px;padding:3px 8px;color:var(--amber);border-color:var(--amber)">Restore</button>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:7px">${(v.word_count||0).toLocaleString()} words · ${v.updated_at?timeAgo(v.updated_at):timeAgo(v.created_at)}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${v.id!==currentDraftId?`<button class="btn btn-sm" onclick="switchDraft('${v.id}')" style="font-size:10px;padding:3px 8px">Switch to</button>`:''}
+        ${!v.is_primary&&versions.length>1?`<button class="btn btn-sm" onclick="setDraftPrimary('${v.id}')" style="font-size:10px;padding:3px 8px">Set primary</button>`:''}
+        <button class="btn btn-sm" onclick="renameDraft('${v.id}')" style="font-size:10px;padding:3px 8px">Rename</button>
+        ${versions.length>1?`<button class="btn btn-sm" onclick="deleteDraft('${v.id}')" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:var(--red)">Delete</button>`:''}
       </div>
     </div>`).join('');
 }
 
+async function switchDraft(versionId) {
+  if(versionId===currentDraftId) return;
+  // Auto-save current draft first
+  await saveChapterEditor(true);
+  const draft = versions.find(v=>v.id===versionId);
+  if(draft) loadDraftIntoEditor(draft);
+  renderVersionSelector();
+  renderVersionHistory();
+}
+
+async function createNewDraft() {
+  const nextNum = (Math.max(...versions.map(v=>v.version_number||1), 0))+1;
+  const defaultLabel = `Draft ${nextNum}`;
+  const label = prompt(`Name this draft:`, defaultLabel);
+  if(!label) return;
+  const copyBody = confirm('Copy content from the current draft?');
+  const body = copyBody ? document.getElementById('editor-body').value : '';
+  const wc = body.trim() ? body.trim().split(/\s+/).length : 0;
+  await saveChapterEditor(true); // save current first
+  const r = await sb('chapter_versions', {
+    method:'POST',
+    body:JSON.stringify({chapter_id:editorChapterId, label, version_number:nextNum, body, word_count:wc, is_primary:false}),
+    headers:{...h,'Prefer':'return=representation'}
+  });
+  if(r&&r[0]) {
+    versions.push(r[0]);
+    loadDraftIntoEditor(r[0]);
+    renderVersionSelector();
+    renderVersionHistory();
+    toast(`${label} created`);
+  }
+}
+
+async function setDraftPrimary(versionId) {
+  const id = versionId || currentDraftId;
+  if(!id) return;
+  // Un-set primary on all, then set on target
+  await Promise.all(versions.map(v=>
+    sb(`chapter_versions?id=eq.${v.id}`, {method:'PATCH', body:JSON.stringify({is_primary: v.id===id})})
+  ));
+  versions.forEach(v=>{ v.is_primary = v.id===id; });
+  // Sync primary draft body to chapters.body so Export and Read Mode work
+  const primary = versions.find(v=>v.id===id);
+  if(primary) {
+    await sb(`chapters?id=eq.${editorChapterId}`, {method:'PATCH', body:JSON.stringify({body:primary.body, word_count:primary.word_count, updated_at:new Date().toISOString()})});
+    await loadChapters();
+  }
+  loadDraftIntoEditor(versions.find(v=>v.id===currentDraftId)||primary);
+  renderVersionSelector();
+  renderVersionHistory();
+  toast('Primary draft set — this is what readers and exports will see');
+}
+
+async function renameDraft(versionId) {
+  const draft = versions.find(v=>v.id===versionId);
+  if(!draft) return;
+  const label = prompt('Rename draft:', draft.label||'Draft');
+  if(!label||label===draft.label) return;
+  await sb(`chapter_versions?id=eq.${versionId}`, {method:'PATCH', body:JSON.stringify({label})});
+  draft.label = label;
+  renderVersionSelector();
+  renderVersionHistory();
+}
+
+async function deleteDraft(versionId) {
+  if(versions.length<=1){ toast("Can't delete the only draft"); return; }
+  const draft = versions.find(v=>v.id===versionId);
+  if(!confirm(`Delete "${draft?.label||'this draft'}"? This cannot be undone.`)) return;
+  await sb(`chapter_versions?id=eq.${versionId}`, {method:'DELETE'});
+  versions = versions.filter(v=>v.id!==versionId);
+  // If we deleted the active draft, switch to primary or first
+  if(versionId===currentDraftId) {
+    const next = versions.find(v=>v.is_primary)||versions[0];
+    if(next) loadDraftIntoEditor(next);
+  }
+  renderVersionSelector();
+  renderVersionHistory();
+  toast('Draft deleted');
+}
+
 async function saveVersion() {
+  // Snapshot current draft state
   if(!editorChapterId) return;
   const body = document.getElementById('editor-body').value;
   const word_count = body.trim() ? body.trim().split(/\s+/).length : 0;
-  const label = prompt('Name this version (e.g. "End of day draft", "Before restructure"):') || 'Version '+new Date().toLocaleString();
-  await sb('chapter_versions', {method:'POST', body:JSON.stringify({chapter_id:editorChapterId, body, word_count, label}), headers:{...h,'Prefer':'return=representation'}});
-  await loadVersionHistory(editorChapterId);
-  toast('Version saved!');
+  const label = prompt('Name this snapshot (e.g. "Before restructure", "End of session"):') || 'Snapshot '+new Date().toLocaleTimeString();
+  if(!label) return;
+  const nextNum = (Math.max(...versions.map(v=>v.version_number||1), 0))+1;
+  const r = await sb('chapter_versions', {method:'POST', body:JSON.stringify({chapter_id:editorChapterId, body, word_count, label, version_number:nextNum, is_primary:false}), headers:{...h,'Prefer':'return=representation'}});
+  if(r&&r[0]) versions.push(r[0]);
+  renderVersionSelector();
+  renderVersionHistory();
+  toast('Snapshot saved!');
 }
 
 function previewVersion(id) {
   const v = versions.find(x=>x.id===id);
   if(!v) return;
   const w = window.open('','_blank','width=700,height=800');
-  w.document.write(`<html><head><style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;line-height:1.8;font-size:15px;color:#222;padding:20px}</style></head><body><h2>${escHtml(v.label||'Version')}</h2><p style="color:#888;font-size:12px">${new Date(v.created_at).toLocaleString()} · ${(v.word_count||0).toLocaleString()} words</p><hr/><div>${(v.body||'').replace(/\n/g,'<br>')}</div></body></html>`);
+  w.document.write(`<html><head><style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;line-height:1.8;font-size:15px;color:#222;padding:20px}</style></head><body><h2>${escHtml(v.label||'Draft')}</h2><p style="color:#888;font-size:12px">${new Date(v.created_at).toLocaleString()} · ${(v.word_count||0).toLocaleString()} words${v.is_primary?' · PRIMARY':''}</p><hr/><div>${(v.body||'').replace(/\n/g,'<br>')}</div></body></html>`);
 }
 
 async function restoreVersion(id) {
-  if(!confirm('Restore this version? Your current draft will be saved as a new version first.')) return;
-  await saveVersion();
-  const v = versions.find(x=>x.id===id);
-  if(!v) return;
-  document.getElementById('editor-body').value = v.body||'';
-  editorWordCount();
-  await saveChapterEditor();
-  toast('Version restored!');
+  await switchDraft(id);
+  toast('Switched to this draft');
 }
 
 // ─── TASKS ────────────────────────────────────────────────
