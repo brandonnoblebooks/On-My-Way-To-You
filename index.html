@@ -4563,12 +4563,10 @@ function scrollToPassageInTextarea(ta, passage, paraIndex) {
   const text = ta.value;
   let targetIdx = -1;
 
-  // Try exact passage match first (use first 80 chars to handle truncation)
+  // Try exact passage match first
   if(passage && passage.trim()) {
-    const search = passage.trim().slice(0, 80);
-    targetIdx = text.indexOf(search);
+    targetIdx = text.indexOf(passage.trim().slice(0, 80));
   }
-
   // Fall back to paragraph index
   if(targetIdx < 0 && paraIndex !== null && paraIndex >= 0) {
     const paras = text.split('\n');
@@ -4578,18 +4576,16 @@ function scrollToPassageInTextarea(ta, passage, paraIndex) {
     }
     targetIdx = chars;
   }
-
   if(targetIdx < 0) { ta.focus(); return; }
 
-  const endIdx = Math.min(targetIdx + (passage ? Math.min(passage.length, 200) : 80), text.length);
+  const endIdx = Math.min(targetIdx + (passage ? Math.min(passage.length, 200) : 100), text.length);
+
+  // Reliable scroll trick: truncate to target → scrollHeight is now at target → restore
+  ta.value = text.slice(0, targetIdx);
+  ta.scrollTop = ta.scrollHeight;
+  ta.value = text;
   ta.focus();
   ta.setSelectionRange(targetIdx, endIdx);
-
-  // Scroll textarea to show the selected text roughly centered
-  const before = text.slice(0, targetIdx);
-  const linesBefore = (before.match(/\n/g) || []).length;
-  const lineHeight = 29; // matches the editor's line-height
-  ta.scrollTop = Math.max(0, linesBefore * lineHeight - ta.clientHeight / 2);
 }
 
 // ── Reading Packets ──
