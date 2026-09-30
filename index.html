@@ -211,6 +211,36 @@ body.reader-mode #app,
 body.reader-mode #bookshelf {
   display: none !important;
 }
+/* ── READER LIGHT THEME ── */
+body[data-reader-theme="light"] #beta-reader-overlay { background: #faf9f7 !important; }
+body[data-reader-theme="light"] #beta-reader-toolbar { background: #f0efe9 !important; border-color: #d5d3cc !important; }
+body[data-reader-theme="light"] #beta-reader-toolbar button { background: #e8e7e0 !important; border-color: #ccc !important; color: #444 !important; }
+body[data-reader-theme="light"] #beta-reader-toolbar span { color: #666 !important; }
+body[data-reader-theme="light"] #beta-reader-toolbar strong { color: #222 !important; }
+body[data-reader-theme="light"] #beta-content-area { color: #1a1a1a !important; }
+body[data-reader-theme="light"] #beta-content-area p { color: #1a1a1a !important; }
+body[data-reader-theme="light"] #beta-feedback-form { background: #f0efe9 !important; border-color: #d5d3cc !important; }
+body[data-reader-theme="light"] #beta-feedback-form div { color: #555 !important; }
+body[data-reader-theme="light"] #beta-feedback-form label { color: #555 !important; }
+body[data-reader-theme="light"] #beta-emotional,
+body[data-reader-theme="light"] #beta-craft,
+body[data-reader-theme="light"] #beta-notes { background: #fff !important; border-color: #ccc !important; color: #222 !important; }
+body[data-reader-theme="light"] .quick-signal-btn { border-color: #ccc !important; color: #666 !important; background: transparent !important; }
+body[data-reader-theme="light"] .quick-signal-btn.active { background: #e0ddd5 !important; color: #333 !important; border-color: #aaa !important; }
+body[data-reader-theme="light"] .star-btn { color: #bbb !important; }
+body[data-reader-theme="light"] .star-btn.active { color: #b8860b !important; }
+body[data-reader-theme="light"] #beta-already-submitted { background: #eaf5ea !important; border-color: #b5d9b5 !important; }
+body[data-reader-theme="light"] #annotation-panel { background: #f0efe9 !important; border-color: #d5d3cc !important; }
+body[data-reader-theme="light"] #anno-overlay { background: rgba(0,0,0,.2) !important; }
+body[data-reader-theme="light"] #anno-passage-preview { background: #e5e3db !important; color: #555 !important; }
+body[data-reader-theme="light"] #anno-panel-label { color: #888 !important; }
+body[data-reader-theme="light"] #anno-note-input { background: #fff !important; border-color: #ccc !important; color: #222 !important; }
+body[data-reader-theme="light"] .anno-react-btn span { color: #999 !important; }
+body[data-reader-theme="light"] #annotation-panel button:not(.anno-react-btn) { background: #e5e3db !important; border-color: #ccc !important; color: #444 !important; }
+body[data-reader-theme="light"] #selection-toolbar { background: #f0efe9 !important; border-color: #d5d3cc !important; }
+body[data-reader-theme="light"] #sel-preview { color: #666 !important; }
+body[data-reader-theme="light"] #selection-toolbar button { background: #e5e3db !important; border-color: #bbb !important; color: #444 !important; }
+body[data-reader-theme="light"] #beta-fab { background: #e8e7e0 !important; border-color: #ccc !important; }
 /* ── INLINE ANNOTATIONS ── */
 #annotation-panel{position:fixed;bottom:-110%;left:0;right:0;background:#1e1e1e;border:1px solid #333;border-radius:20px 20px 0 0;padding:20px;z-index:601;transition:bottom .28s cubic-bezier(.4,0,.2,1);max-height:72vh;overflow-y:auto}
 #annotation-panel.open{bottom:0}
@@ -1055,10 +1085,11 @@ select.form-input option{background:var(--bg2)}
 
 <!-- BETA READER OVERLAY -->
 <div id="beta-reader-overlay" style="display:none;position:fixed;inset:0;background:#111;z-index:500;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #333;flex-shrink:0;flex-wrap:wrap">
+  <div id="beta-reader-toolbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #333;flex-shrink:0;flex-wrap:wrap">
     <button class="btn btn-sm" onclick="closeBetaReader()" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-times"></i></button>
     <span style="font-size:13px;color:#888;font-style:italic;flex:1">On My Way To You</span>
     <span style="font-size:12px;color:#666">Reading as: <strong id="beta-reader-name" style="color:#aaa"></strong></span>
+    <button id="reader-theme-btn" onclick="toggleReaderTheme()" title="Toggle light/dark mode" style="background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#aaa;cursor:pointer;font-size:16px;padding:4px 8px;line-height:1">🌙</button>
     <button class="btn btn-sm" onclick="betaPrev()" id="beta-prev" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-chevron-left"></i></button>
     <span id="beta-indicator" style="font-size:12px;color:#666;white-space:nowrap"></span>
     <button class="btn btn-sm" onclick="betaNext()" id="beta-next" style="background:#2a2a2a;border-color:#444;color:#ccc"><i class="fas fa-chevron-right"></i></button>
@@ -3376,6 +3407,30 @@ let betaFeedback = [], submissionDocs = [], agentQueries = [], arcReaders = [], 
 let betaItems = [], betaIndex = 0, betaRating = 0, betaEditId = null, betaMomentum = false, betaReread = false;
 let subMode = 'traditional', subSaveTimers = {};
 let betaAnnotations = [], currentAnnoPara = null, currentAnnoParaIdx = null, currentAnnoReaction = '', currentAnnoEditId = null;
+let readerTheme = 'dark';
+
+function initReaderTheme() {
+  const saved = localStorage.getItem('omwty_reader_theme');
+  if(saved) {
+    readerTheme = saved;
+  } else {
+    // Match device preference
+    readerTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  applyReaderTheme();
+}
+
+function applyReaderTheme() {
+  document.body.dataset.readerTheme = readerTheme;
+  const btn = document.getElementById('reader-theme-btn');
+  if(btn) btn.textContent = readerTheme === 'light' ? '🌙' : '☀️';
+}
+
+function toggleReaderTheme() {
+  readerTheme = readerTheme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('omwty_reader_theme', readerTheme);
+  applyReaderTheme();
+}
 
 function checkTextSelection() {
   const sel = window.getSelection();
@@ -5055,6 +5110,7 @@ function initBetaReaderMode(){
   document.getElementById('beta-reader-name').textContent=localStorage.getItem('omwty_display_name')||'Reader';
   const closeBtn=document.querySelector('#beta-reader-overlay .btn-sm:first-child');
   if(closeBtn) closeBtn.style.display='none';
+  initReaderTheme();
 
   // Parse chapter filter from URL (?chapters=3,4,5)
   const params=new URLSearchParams(window.location.search);
